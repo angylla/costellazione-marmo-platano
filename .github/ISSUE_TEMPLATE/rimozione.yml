@@ -1,0 +1,34 @@
+name: "Rimozione / rettifica di dati personali"
+description: "Chiedi di correggere o togliere un dato che ti riguarda"
+title: "Rimozione: "
+labels: ["rimozione"]
+body:
+  - type: markdown
+    attributes:
+      value: "Le richieste di rimozione hanno la precedenza e vengono gestite il prima possibile."
+  - type: input
+    id: target
+    attributes:
+      label: "Ente interessato (nome o codice)"
+    validations:
+      required: true
+  - type: input
+    id: nome
+    attributes:
+      label: "Nome dell'ente"
+    validations:
+      required: false
+  - type: textarea
+    id: desc
+    attributes:
+      label: "Quale dato va rettificato o rimosso, e perché"
+      description: "Se il dato ti riguarda e preferisci non scrivere qui, contatta chi cura il progetto in privato."
+    validations:
+      required: true
+  - type: checkboxes
+    id: conferma
+    attributes:
+      label: Conferma
+      options:
+        - label: "I dati provengono da fonti pubbliche e non includo informazioni private (telefoni personali, indirizzi di casa)"
+          required: true

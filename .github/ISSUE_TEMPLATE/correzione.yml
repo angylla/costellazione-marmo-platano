@@ -1,0 +1,96 @@
+name: "Correzione"
+description: "Segnala un dato sbagliato o non aggiornato"
+title: "Correzione: "
+labels: ["correzione"]
+body:
+  - type: markdown
+    attributes:
+      value: "Indica l'ente e cosa va corretto."
+  - type: input
+    id: target
+    attributes:
+      label: "Ente esistente (nome o codice, es. S040)"
+    validations:
+      required: true
+  - type: input
+    id: nome
+    attributes:
+      label: "Nome dell'ente"
+    validations:
+      required: false
+  - type: input
+    id: cat
+    attributes:
+      label: "Categoria"
+      description: "Es. 8. Terzo settore e associazioni culturali (vedi CONTRIBUTING.md)"
+    validations:
+      required: false
+  - type: input
+    id: com
+    attributes:
+      label: "Comune o livello"
+      description: "Uno dei 10 comuni, oppure Area / Regione / Nazionale"
+    validations:
+      required: false
+  - type: input
+    id: ril
+    attributes:
+      label: "Rilevanza per il progetto"
+      description: "Alta, Media o Bassa"
+    validations:
+      required: false
+  - type: input
+    id: ruolo
+    attributes:
+      label: "Ruolo nel progetto"
+      description: "Es. Gatekeeper, Partner, Possibile gestore"
+    validations:
+      required: false
+  - type: textarea
+    id: desc
+    attributes:
+      label: "Descrizione"
+      description: "Cosa fa l'ente, in una o due frasi"
+    validations:
+      required: true
+  - type: input
+    id: ref
+    attributes:
+      label: "Referente"
+      description: "Nome e cognome come compare sulla fonte"
+    validations:
+      required: false
+  - type: input
+    id: rr
+    attributes:
+      label: "Ruolo del referente"
+      description: "Es. Presidente, Dirigente scolastico"
+    validations:
+      required: false
+  - type: input
+    id: em
+    attributes:
+      label: "Email istituzionale o dell'ente"
+    validations:
+      required: false
+  - type: input
+    id: li
+    attributes:
+      label: "LinkedIn"
+      description: "Pagina dell'ente o profilo professionale pubblico"
+    validations:
+      required: false
+  - type: input
+    id: src
+    attributes:
+      label: "Fonte (link)"
+      description: "Link che conferma la correzione"
+    validations:
+      required: false
+  - type: checkboxes
+    id: conferma
+    attributes:
+      label: Conferma
+      options:
+        - label: "I dati provengono da fonti pubbliche e non includo informazioni private (telefoni personali, indirizzi di casa)"
+          required: true
