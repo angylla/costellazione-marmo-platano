@@ -1,0 +1,85 @@
+area,tipo,comune,lat,lon
+Vulture,interna,Atella,40.8803,15.6502
+Vulture,interna,Barile,40.9463,15.6727
+Vulture,interna,Filiano,40.8107,15.7062
+Vulture,interna,Ginestra,40.9116,15.7601
+Vulture,interna,Lavello,41.0456,15.7908
+Vulture,interna,Maschito,40.9228,15.8533
+Vulture,interna,Montemilone,41.03,15.9693
+Vulture,interna,Rapolla,40.9757,15.6713
+Vulture,interna,Rionero in Vulture,40.9262,15.6694
+Vulture,interna,Ripacandida,40.9118,15.7248
+Vulture,interna,Venosa,40.9613,15.8149
+Alto Bradano,interna,Acerenza,40.7921,15.9366
+Alto Bradano,interna,Banzi,40.8613,16.0123
+Alto Bradano,interna,Cancellara,40.7302,15.9258
+Alto Bradano,interna,Forenza,40.8596,15.8553
+Alto Bradano,interna,Genzano di Lucania,40.8467,16.0313
+Alto Bradano,interna,Oppido Lucano,40.7618,15.9867
+Alto Bradano,interna,Palazzo San Gervasio,40.9313,15.9808
+Alto Bradano,interna,San Chirico Nuovo,40.6767,16.0785
+Alto Bradano,interna,Tolve,40.693,16.0113
+Marmo Platano,interna,Balvano,40.6503,15.5142
+Marmo Platano,interna,Baragiano,40.6797,15.594
+Marmo Platano,interna,Bella,40.7606,15.5393
+Marmo Platano,interna,Castelgrande,40.7866,15.4302
+Marmo Platano,interna,Muro Lucano,40.7525,15.4858
+Marmo Platano,interna,Pescopagano,40.8361,15.3978
+Marmo Platano,interna,Rapone,40.8469,15.5005
+Marmo Platano,interna,Ruoti,40.7092,15.6931
+Marmo Platano,interna,Ruvo del Monte,40.8488,15.5414
+Marmo Platano,interna,San Fele,40.8193,15.5384
+Medio Basento,interna,Calciano,40.5836,16.1777
+Medio Basento,interna,Ferrandina,40.5012,16.4547
+Medio Basento,interna,Garaguso,40.5484,16.2272
+Medio Basento,interna,Grassano,40.6326,16.2828
+Medio Basento,interna,Oliveto Lucano,40.5353,16.1846
+Medio Basento,interna,Pomarico,40.5179,16.5459
+Medio Basento,interna,Salandra,40.5275,16.3192
+Medio Basento,interna,Tricarico,40.6201,16.1436
+Montagna Materana,interna,Accettura,40.4957,16.1472
+Montagna Materana,interna,Aliano,40.3114,16.232
+Montagna Materana,interna,Cirigliano,40.3929,16.1718
+Montagna Materana,interna,Craco,40.3784,16.4397
+Montagna Materana,interna,Gorgoglione,40.3944,16.1446
+Montagna Materana,interna,Missanello,40.282,16.1663
+Montagna Materana,interna,San Mauro Forte,40.4873,16.2482
+Montagna Materana,interna,Stigliano,40.4012,16.2316
+Medio Agri,interna,Armento,40.3077,16.065
+Medio Agri,interna,Gallicchio,40.289,16.1391
+Medio Agri,interna,Roccanova,40.212,16.2032
+Medio Agri,interna,San Chirico Raparo,40.1907,16.0763
+Medio Agri,interna,Sant'Arcangelo,40.2466,16.2746
+Mercure – Alto Sinni – Val Sarmento,interna,Calvera,40.1495,16.1439
+Mercure – Alto Sinni – Val Sarmento,interna,Carbone,40.1424,16.0894
+Mercure – Alto Sinni – Val Sarmento,interna,Castelluccio Inferiore,40.0039,15.9809
+Mercure – Alto Sinni – Val Sarmento,interna,Castelluccio Superiore,40.0103,15.9751
+Mercure – Alto Sinni – Val Sarmento,interna,Castronuovo di Sant'Andrea,40.1907,16.1855
+Mercure – Alto Sinni – Val Sarmento,interna,Cersosimo,40.047,16.3494
+Mercure – Alto Sinni – Val Sarmento,interna,Chiaromonte,40.124,16.2138
+Mercure – Alto Sinni – Val Sarmento,interna,Episcopia,40.0748,16.0982
+Mercure – Alto Sinni – Val Sarmento,interna,Fardella,40.1138,16.1698
+Mercure – Alto Sinni – Val Sarmento,interna,Francavilla in Sinni,40.0802,16.2032
+Mercure – Alto Sinni – Val Sarmento,interna,Latronico,40.0898,16.0118
+Mercure – Alto Sinni – Val Sarmento,interna,Noepoli,40.0868,16.3297
+Mercure – Alto Sinni – Val Sarmento,interna,Rotonda,39.9528,16.0391
+Mercure – Alto Sinni – Val Sarmento,interna,San Costantino Albanese,40.0358,16.3047
+Mercure – Alto Sinni – Val Sarmento,interna,San Giorgio Lucano,40.1119,16.388
+Mercure – Alto Sinni – Val Sarmento,interna,San Paolo Albanese,40.0366,16.3349
+Mercure – Alto Sinni – Val Sarmento,interna,San Severino Lucano,40.0206,16.1379
+Mercure – Alto Sinni – Val Sarmento,interna,Senise,40.1472,16.2895
+Mercure – Alto Sinni – Val Sarmento,interna,Teana,40.1269,16.155
+Mercure – Alto Sinni – Val Sarmento,interna,Terranova di Pollino,39.9781,16.2963
+Mercure – Alto Sinni – Val Sarmento,interna,Viggianello,39.9732,16.0854
+Area urbana di Matera,urbana,Grottole,40.6011,16.3815
+Area urbana di Matera,urbana,Matera,40.667,16.6063
+Area urbana di Matera,urbana,Miglionico,40.5694,16.501
+Area urbana di Matera,urbana,Montescaglioso,40.5522,16.6669
+Area urbana di Potenza,urbana,Avigliano,40.7314,15.7174
+Area urbana di Potenza,urbana,Brindisi Montagna,40.6029,15.9296
+Area urbana di Potenza,urbana,Picerno,40.6385,15.6359
+Area urbana di Potenza,urbana,Pietragalla,40.7475,15.8806
+Area urbana di Potenza,urbana,Pignola,40.5736,15.7835
+Area urbana di Potenza,urbana,Potenza,40.6384,15.8022
+Area urbana di Potenza,urbana,Tito,40.5836,15.6755
+Area urbana di Potenza,urbana,Vaglio Basilicata,40.6664,15.9212
