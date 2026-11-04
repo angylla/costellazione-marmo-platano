@@ -1,0 +1,758 @@
+<title>Costellazione Aree Interne</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a star chart of the Marmo Platano area. Full-screen sky, comuni placed by real coordinates, stakeholders orbiting them; controls float top-left, details slide in from the right (bottom sheet on phones). */
+:root{
+  --sky:#080d18; --sky-2:#0e1626; --panel:rgba(14,22,38,.94); --line:rgba(150,175,215,.16);
+  --ink:#e9eef7; --ink-2:#a9b6cc; --ink-3:#6f7d95; --accent:#f2c879; --ok:#7ccf9a; --warn:#f0b35a;
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--sky);color:var(--ink);font-family:var(--f-body);font-size:14px;overflow:hidden}
+#sky{position:fixed;inset:0;display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+#sky.dragging{cursor:grabbing}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.dock{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:max(16px, env(safe-area-inset-left,0px));width:min(340px, calc(100vw - 32px));max-height:calc(100% - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;z-index:5;pointer-events:none}
+.dock > *{pointer-events:auto}
+.brand{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;backdrop-filter:blur(8px)}
+.eyebrow{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font-family:var(--f-display);font-weight:700;font-size:24px;line-height:1.05;margin:4px 0 6px;text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--ink-2);font-size:12.5px;line-height:1.45;margin:0}
+.stats{display:flex;gap:14px;margin-top:10px;font-family:var(--f-mono);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.stats b{color:var(--ink);font-weight:500;font-size:13px}
+.search{position:relative}
+.search input{width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 34px;font-size:13.5px}
+.search input::placeholder{color:var(--ink-3)}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:var(--ink-3);fill:none;stroke-width:2}
+.results{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--panel);border:1px solid var(--line);border-radius:10px;max-height:300px;overflow:auto;padding:4px;z-index:3}
+.results button{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:7px 8px;border-radius:7px;cursor:pointer;font-size:13px}
+.results button:hover,.results button.on{background:rgba(255,255,255,.06)}
+.results small{color:var(--ink-3);margin-left:auto;font-size:11px;white-space:nowrap}
+.filters{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px 12px;overflow:auto;min-height:0}
+.filters summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);padding:2px 0}
+.filters summary::-webkit-details-marker{display:none}
+.filters summary::after{content:"–";color:var(--ink-3)}
+.filters:not([open]) summary::after{content:"+"}
+.legend{display:grid;gap:2px;margin-top:8px}
+.leg{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;background:none;border:0;padding:4px 4px;border-radius:6px;cursor:pointer;text-align:left;font-size:12.5px;color:var(--ink)}
+.leg:hover{background:rgba(255,255,255,.05)}
+.leg i{width:9px;height:9px;border-radius:50%;justify-self:center;box-shadow:0 0 8px currentColor}
+.leg span:last-child{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.leg.off{color:var(--ink-3)}
+.leg.off i{opacity:.25;box-shadow:none}
+.row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--ink-2)}
+.chip[aria-pressed="true"]{background:rgba(242,200,121,.14);border-color:rgba(242,200,121,.5);color:var(--ink)}
+.lbl{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-top:12px}
+.sm{font-size:11.5px;color:var(--ink-3);margin-top:10px;line-height:1.4}
+
+.panel{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(16px, env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(400px, calc(100vw - 32px));background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(10px);z-index:6;display:flex;flex-direction:column;overflow:hidden;transform:translateX(calc(100% + 24px));transition:transform .28s ease}
+.panel.open{transform:none}
+.ph{padding:16px 18px 12px;border-bottom:1px solid var(--line);position:relative}
+.close{position:absolute;top:10px;right:10px;background:none;border:0;width:32px;height:32px;border-radius:8px;cursor:pointer;color:var(--ink-2);font-size:20px;line-height:1}
+.close:hover{background:rgba(255,255,255,.06)}
+.ph h2{font-family:var(--f-display);font-weight:700;font-size:20px;line-height:1.15;margin:6px 34px 8px 0;text-wrap:balance}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11.5px;border-radius:999px;padding:3px 9px;border:1px solid var(--line);color:var(--ink-2)}
+.tag.cat{color:var(--ink)}
+.tag.Alta{border-color:rgba(124,207,154,.5);color:var(--ok)}
+.tag.warn{border-color:rgba(240,179,90,.5);color:var(--warn)}
+.pb{padding:14px 18px 20px;overflow:auto;display:grid;gap:16px;align-content:start}
+.sec h3{font-family:var(--f-mono);font-weight:500;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+.sec p{margin:0;line-height:1.55;color:var(--ink);white-space:pre-line;font-size:13.5px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--ink-3)}
+.kv dd{margin:0}
+.contact{display:flex;gap:8px;align-items:flex-start;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+.contact code{font-family:var(--f-mono);font-size:12px;line-height:1.5;flex:1;min-width:0;overflow-wrap:anywhere;user-select:all}
+.copy{flex:none;border:1px solid var(--line);background:transparent;border-radius:7px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--ink-2)}
+.copy:hover{color:var(--ink)}
+.links{display:grid;gap:4px}
+.ref{background:rgba(242,200,121,.06);border:1px solid rgba(242,200,121,.25);border-radius:10px;padding:10px 12px;display:grid;gap:4px}
+.ref .rn{font-family:var(--f-display);font-weight:700;font-size:15px}
+.ref .rr{color:var(--ink-2);font-size:12.5px;line-height:1.4}
+.ref a{color:#9cc3ff;font-size:12.5px;text-decoration:none}
+.ref a:hover{text-decoration:underline}
+.ref .src{color:var(--ink-3)!important;font-size:11.5px}
+.links a{color:#9cc3ff;font-size:12.5px;overflow-wrap:anywhere;text-decoration:none}
+.links a:hover{text-decoration:underline}
+.nlist{display:grid;gap:2px}
+.nlist button{display:flex;gap:8px;align-items:center;background:none;border:0;text-align:left;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:13px}
+.nlist button:hover{background:rgba(255,255,255,.05)}
+.nlist i{width:8px;height:8px;border-radius:50%;flex:none}
+.nlist small{margin-left:auto;color:var(--ink-3);font-size:11px;white-space:nowrap}
+
+.tip{position:fixed;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px;z-index:7;max-width:260px;opacity:0;transition:opacity .12s}
+.tip small{display:block;color:var(--ink-3);font-size:11px;margin-top:2px}
+.zoom{position:fixed;right:max(16px, env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;z-index:4}
+.zoom button{width:38px;height:38px;border-radius:10px;background:var(--panel);border:1px solid var(--line);cursor:pointer;font-size:18px;color:var(--ink-2)}
+.zoom button:hover{color:var(--ink)}
+.panel.open ~ .zoom{right:calc(max(16px, env(safe-area-inset-right,0px)) + min(400px, calc(100vw - 32px)) + 10px)}
+[hidden]{display:none!important}
+.aleg{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;background:none;border:0;padding:4px;border-radius:6px;cursor:pointer;text-align:left;font-size:12.5px;color:var(--ink)}
+.aleg:hover,.aleg.on{background:rgba(255,255,255,.06)}
+.aleg i{width:10px;height:10px;border-radius:3px;justify-self:center}
+.aleg i.urb{background-image:repeating-linear-gradient(135deg,transparent 0 2px,rgba(8,13,24,.6) 2px 4px)!important}
+.aleg span:last-child{font-family:var(--f-mono);font-size:11px;color:var(--ink-3)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{border:1px solid rgba(242,200,121,.55);background:rgba(242,200,121,.14);color:var(--ink);border-radius:9px;padding:7px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+.btn:hover{background:rgba(242,200,121,.24)}
+.btn.ghost{background:transparent;border-color:var(--line);color:var(--ink-2);font-weight:500}
+.btn.danger{border-color:rgba(255,154,168,.5);background:transparent;color:#ff9aa8}
+.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:#1b1408;font-size:11px;margin-left:6px;text-align:center}
+.note{font-size:11.5px;color:var(--ink-3);line-height:1.45;margin-top:8px}
+.modal{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(4,7,14,.66);padding:16px max(16px, env(safe-area-inset-right,0px)) 16px max(16px, env(safe-area-inset-left,0px))}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(620px,100%);max-height:calc(100% - 32px);overflow:auto;padding:18px 20px 20px;backdrop-filter:blur(10px)}
+.sheet h2{font-family:var(--f-display);font-size:20px;margin:4px 0 4px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-top:12px}
+.form .full{grid-column:1/-1}
+.form label{display:grid;gap:4px;font-size:12px;color:var(--ink-2);min-width:0}
+.form input,.form select,.form textarea{background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--ink);min-width:0}
+.form textarea{min-height:70px;resize:vertical}
+.form .req::after{content:" *";color:var(--accent)}
+.err{color:#ff9aa8;font-size:12px;min-height:16px}
+.prop{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px;background:rgba(255,255,255,.03)}
+.prop b{font-size:13.5px}
+.prop .meta{font-size:11.5px;color:var(--ink-3)}
+.prop p{font-size:12.5px;margin:0;color:var(--ink-2);white-space:pre-line}
+@media (max-width:560px){.form{grid-template-columns:1fr}}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--accent);color:#1b1408;padding:7px 14px;border-radius:999px;font-size:12.5px;font-weight:600;z-index:9;opacity:0;transition:opacity .2s}
+
+@media (max-width: 720px){
+  .dock{width:calc(100vw - 32px)}
+  h1{font-size:20px}
+  .sub{display:none}
+  .filters:not([open]){padding-bottom:10px}
+  .panel{top:auto;left:max(16px, env(safe-area-inset-left,0px));right:max(16px, env(safe-area-inset-right,0px));width:auto;height:62%;transform:translateY(calc(100% + 24px))}
+  .panel.open{transform:none}
+  .panel.open ~ .zoom{display:none}
+}
+@media (prefers-reduced-motion: reduce){ .panel{transition:none} }
+</style>
+
+<canvas id="sky" aria-label="Mappa interattiva delle aree interne della Basilicata e degli stakeholder"></canvas>
+
+<div class="dock">
+  <div class="brand">
+    <div class="eyebrow">Progetto Basilicata · OCPG UniSa</div>
+    <h1>Costellazione Aree Interne Basilicata</h1>
+    <p class="sub">Le 7 aree interne SNAI e le 2 aree urbane della Basilicata, con i loro comuni nelle posizioni reali. Marmo Platano, area pilota, è mappata per intero: attori, referenti e opere.</p>
+    <div class="stats" id="stats"></div>
+    <div class="actions">
+      <button class="btn" id="bPropose" type="button">+ Proponi un ente</button>
+      <button class="btn ghost" id="bReview" type="button" hidden>Proposte da rivedere<span class="badge" id="nProp">0</span></button>
+    </div>
+    <p class="note" id="collabNote">Mappa aperta: chiunque abbia accesso può proporre nuovi enti o correzioni. Le proposte compaiono dopo la revisione.</p>
+  </div>
+  <div class="search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Cerca un attore, un comune, un'opera…" autocomplete="off" aria-label="Cerca">
+    <div class="results" id="results" hidden></div>
+  </div>
+  <details class="filters" id="filters" open>
+    <summary>Aree, filtri e legenda</summary>
+    <div class="lbl" style="margin-top:8px">Aree della strategia 2021-27</div>
+    <div class="legend" id="aleg"></div>
+    <div class="lbl">Categorie di attori</div>
+    <div class="legend" id="legend"></div>
+    <div class="lbl">Rilevanza</div>
+    <div class="row" id="rel"></div>
+    <div class="lbl">Mostra</div>
+    <div class="row">
+      <button class="chip" id="tOpere" aria-pressed="true">Opere 2021-27</button>
+      <button class="chip" id="tUni" aria-pressed="true">Università e AFAM</button>
+      <button class="chip" id="tScu" aria-pressed="true">Scuole delle altre aree</button>
+      <button class="chip" id="tVer" aria-pressed="false">Solo da verificare</button>
+    </div>
+    <p class="sm">Clic su un'area per vederne i comuni, su un punto per i dettagli e i contatti. Trascina per spostarti, rotella o pizzico per lo zoom.</p>
+  </details>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="eyebrow">Contribuisci alla mappa</div>
+    <h2 id="mTitle">Proponi un ente</h2>
+    <p class="note">Indica una fonte pubblica per ogni dato. Per i referenti usa solo ruoli e contatti pubblicati dall'ente o da fonti ufficiali.</p>
+    <form id="pform" class="form" novalidate>
+      <label class="full">Tipo di proposta
+        <select id="f_tipo"><option value="nuovo">Nuovo ente</option><option value="correzione">Correzione di un ente esistente</option><option value="rimozione">Richiesta di rimozione o rettifica di dati personali</option></select></label>
+      <label class="full" id="w_target" hidden>Ente esistente (nome o codice, es. S040)<input id="f_target" autocomplete="off"></label>
+      <label class="full"><span class="req">Nome dell'ente</span><input id="f_nome" autocomplete="off"></label>
+      <label><span class="req">Categoria</span><select id="f_cat"></select></label>
+      <label><span class="req">Comune o livello</span><select id="f_com"></select></label>
+      <label>Rilevanza per il progetto<select id="f_ril"><option>Media</option><option>Alta</option><option>Bassa</option></select></label>
+      <label>Ruolo nel progetto<input id="f_ruolo" placeholder="es. Gatekeeper, Partner, Possibile gestore"></label>
+      <label class="full">Descrizione / correzione<textarea id="f_desc"></textarea></label>
+      <label>Referente<input id="f_ref" autocomplete="off"></label>
+      <label>Ruolo del referente<input id="f_rr" autocomplete="off"></label>
+      <label>Email istituzionale<input id="f_em" type="email" autocomplete="off"></label>
+      <label>LinkedIn<input id="f_li" type="url" placeholder="https://www.linkedin.com/…"></label>
+      <label class="full"><span class="req">Fonte (link)</span><input id="f_src" type="url" placeholder="https://…"></label>
+      <div class="err full" id="ferr"></div>
+      <div class="actions full"><button class="btn" type="submit" id="fsend">Invia la proposta</button><button class="btn ghost" type="button" id="fcancel">Annulla</button></div>
+    </form>
+  </div>
+</div>
+
+<aside class="panel" id="panel" aria-live="polite">
+  <div class="ph"><button class="close" id="close" aria-label="Chiudi">×</button><div id="phead"></div></div>
+  <div class="pb" id="pbody"></div>
+</aside>
+<div class="zoom">
+  <button id="zin" aria-label="Ingrandisci">+</button>
+  <button id="zout" aria-label="Riduci">−</button>
+  <button id="zfit" aria-label="Vista intera">⤢</button>
+</div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const DATA = __DATA__;
+
+const CAT = {
+  1:{n:"Enti locali",c:"#f2c879"}, 2:{n:"Governance d'area",c:"#ffd9a0"}, 3:{n:"Regione ed enti regionali",c:"#8fb4ff"},
+  4:{n:"Livello nazionale ed europeo",c:"#b9a7ff"}, 5:{n:"Scuola e formazione",c:"#6fd3e0"}, 6:{n:"Welfare e sanità",c:"#ff9aa8"},
+  7:{n:"Chiesa e realtà ecclesiali",c:"#d8c3a5"}, 8:{n:"Terzo settore e cultura",c:"#ffb072"}, 9:{n:"Sport e outdoor",c:"#8ee08a"},
+  10:{n:"Patrimonio e ambiente",c:"#c6e070"}, 11:{n:"Economia e lavoro",c:"#f07ad0"}, 12:{n:"Università e ricerca",c:"#7fa0ff"},
+  13:{n:"Università e AFAM in Basilicata",c:"#a4b8ff"}
+};
+const OPERA_C = "#ffffff";
+// Aree SNAI 2021-27 (composizione dalla presentazione OCPG del 7/10/2026) e coordinate reali dei comuni (OpenStreetMap)
+const AREE = [{"id": "vu", "n": "Vulture", "t": "interna", "col": "#3fd3e3", "cs": ["Atella", "Barile", "Filiano", "Ginestra", "Lavello", "Maschito", "Montemilone", "Rapolla", "Rionero in Vulture", "Ripacandida", "Venosa"]}, {"id": "ab", "n": "Alto Bradano", "t": "interna", "col": "#b9a6b0", "cs": ["Acerenza", "Banzi", "Cancellara", "Forenza", "Genzano di Lucania", "Oppido Lucano", "Palazzo San Gervasio", "San Chirico Nuovo", "Tolve"]}, {"id": "mp", "n": "Marmo Platano", "t": "interna", "col": "#6a95ff", "cs": ["Balvano", "Baragiano", "Bella", "Castelgrande", "Muro Lucano", "Pescopagano", "Rapone", "Ruoti", "Ruvo del Monte", "San Fele"]}, {"id": "mb", "n": "Medio Basento", "t": "interna", "col": "#ef9f8f", "cs": ["Calciano", "Ferrandina", "Garaguso", "Grassano", "Oliveto Lucano", "Pomarico", "Salandra", "Tricarico"]}, {"id": "mm", "n": "Montagna Materana", "t": "interna", "col": "#d08a3c", "cs": ["Accettura", "Aliano", "Cirigliano", "Craco", "Gorgoglione", "Missanello", "San Mauro Forte", "Stigliano"]}, {"id": "ma", "n": "Medio Agri", "t": "interna", "col": "#62d36e", "cs": ["Armento", "Gallicchio", "Roccanova", "San Chirico Raparo", "Sant'Arcangelo"]}, {"id": "ms", "n": "Mercure – Alto Sinni – Val Sarmento", "t": "interna", "col": "#c4bd45", "cs": ["Calvera", "Carbone", "Castelluccio Inferiore", "Castelluccio Superiore", "Castronuovo di Sant'Andrea", "Cersosimo", "Chiaromonte", "Episcopia", "Fardella", "Francavilla in Sinni", "Latronico", "Noepoli", "Rotonda", "San Costantino Albanese", "San Giorgio Lucano", "San Paolo Albanese", "San Severino Lucano", "Senise", "Teana", "Terranova di Pollino", "Viggianello"]}, {"id": "umt", "n": "Area urbana di Matera", "t": "urbana", "col": "#ffd84a", "cs": ["Grottole", "Matera", "Miglionico", "Montescaglioso"]}, {"id": "upz", "n": "Area urbana di Potenza", "t": "urbana", "col": "#ff9a3c", "cs": ["Avigliano", "Brindisi Montagna", "Picerno", "Pietragalla", "Pignola", "Potenza", "Tito", "Vaglio Basilicata"]}];
+const GEO = {"Atella": [40.8803, 15.6502], "Barile": [40.9463, 15.6727], "Filiano": [40.8107, 15.7062], "Ginestra": [40.9116, 15.7601], "Lavello": [41.0456, 15.7908], "Maschito": [40.9228, 15.8533], "Montemilone": [41.03, 15.9693], "Rapolla": [40.9757, 15.6713], "Rionero in Vulture": [40.9262, 15.6694], "Ripacandida": [40.9118, 15.7248], "Venosa": [40.9613, 15.8149], "Acerenza": [40.7921, 15.9366], "Banzi": [40.8613, 16.0123], "Cancellara": [40.7302, 15.9258], "Forenza": [40.8596, 15.8553], "Genzano di Lucania": [40.8467, 16.0313], "Oppido Lucano": [40.7618, 15.9867], "Palazzo San Gervasio": [40.9313, 15.9808], "San Chirico Nuovo": [40.6767, 16.0785], "Tolve": [40.693, 16.0113], "Balvano": [40.6503, 15.5142], "Baragiano": [40.6797, 15.594], "Bella": [40.7606, 15.5393], "Castelgrande": [40.7866, 15.4302], "Muro Lucano": [40.7525, 15.4858], "Pescopagano": [40.8361, 15.3978], "Rapone": [40.8469, 15.5005], "Ruoti": [40.7092, 15.6931], "Ruvo del Monte": [40.8488, 15.5414], "San Fele": [40.8193, 15.5384], "Calciano": [40.5836, 16.1777], "Ferrandina": [40.5012, 16.4547], "Garaguso": [40.5484, 16.2272], "Grassano": [40.6326, 16.2828], "Oliveto Lucano": [40.5353, 16.1846], "Pomarico": [40.5179, 16.5459], "Salandra": [40.5275, 16.3192], "Tricarico": [40.6201, 16.1436], "Accettura": [40.4957, 16.1472], "Aliano": [40.3114, 16.232], "Cirigliano": [40.3929, 16.1718], "Craco": [40.3784, 16.4397], "Gorgoglione": [40.3944, 16.1446], "Missanello": [40.282, 16.1663], "San Mauro Forte": [40.4873, 16.2482], "Stigliano": [40.4012, 16.2316], "Armento": [40.3077, 16.065], "Gallicchio": [40.289, 16.1391], "Roccanova": [40.212, 16.2032], "San Chirico Raparo": [40.1907, 16.0763], "Sant'Arcangelo": [40.2466, 16.2746], "Calvera": [40.1495, 16.1439], "Carbone": [40.1424, 16.0894], "Castelluccio Inferiore": [40.0039, 15.9809], "Castelluccio Superiore": [40.0103, 15.9751], "Castronuovo di Sant'Andrea": [40.1907, 16.1855], "Cersosimo": [40.047, 16.3494], "Chiaromonte": [40.124, 16.2138], "Episcopia": [40.0748, 16.0982], "Fardella": [40.1138, 16.1698], "Francavilla in Sinni": [40.0802, 16.2032], "Latronico": [40.0898, 16.0118], "Noepoli": [40.0868, 16.3297], "Rotonda": [39.9528, 16.0391], "San Costantino Albanese": [40.0358, 16.3047], "San Giorgio Lucano": [40.1119, 16.388], "San Paolo Albanese": [40.0366, 16.3349], "San Severino Lucano": [40.0206, 16.1379], "Senise": [40.1472, 16.2895], "Teana": [40.1269, 16.155], "Terranova di Pollino": [39.9781, 16.2963], "Viggianello": [39.9732, 16.0854], "Grottole": [40.6011, 16.3815], "Matera": [40.667, 16.6063], "Miglionico": [40.5694, 16.501], "Montescaglioso": [40.5522, 16.6669], "Avigliano": [40.7314, 15.7174], "Brindisi Montagna": [40.6029, 15.9296], "Picerno": [40.6385, 15.6359], "Pietragalla": [40.7475, 15.8806], "Pignola": [40.5736, 15.7835], "Potenza": [40.6384, 15.8022], "Tito": [40.5836, 15.6755], "Vaglio Basilicata": [40.6664, 15.9212]};
+const SCU = [{"id": "MTIC808001", "n": "I.C. GRASSANO - MIGLIONICO", "tp": "Istituto Comprensivo", "ind": "Via Capitano Pirrone, 75014 Grassano", "em": "mtic808001@istruzione.it", "pec": "", "w": "", "cs": ["Garaguso", "Grassano", "Grottole", "Miglionico"], "pl": [["\"Il Vento\" - Garaguso", "Scuola Primo Grado", "Garaguso", "MTMM808023"], ["Via Dante-Miglionico", "Scuola Infanzia", "Miglionico", "MTAA808052"], ["Grottole-Miglionico", "Scuola Infanzia", "Grottole", "MTAA808063"], ["S.G.Bosco - Grassano", "Scuola Primaria", "Grassano", "MTEE808013"], ["Grottole-Miglionico", "Scuola Primaria", "Grottole", "MTEE808057"], ["I Grado- Miglionico", "Scuola Primo Grado", "Miglionico", "MTMM808034"], ["''A. Ilvento''- Grassano", "Scuola Primo Grado", "Grassano", "MTMM808012"], ["Via Don.Bosco-Grassano", "Scuola Infanzia", "Grassano", "MTAA80802V"], ["S. Materna (Garaguso)-Grassano", "Scuola Infanzia", "Garaguso", "MTAA808041"], ["L.Schirone- Garaguso", "Scuola Primaria", "Garaguso", "MTEE808035"], ["I Grado- Grottole", "Scuola Primo Grado", "Grottole", "MTMM808045"], ["\"D.D. Gallucci\"-Miglionico", "Scuola Primaria", "Miglionico", "MTEE808046"], ["I.C. Grassano - Miglionico", "Istituto Comprensivo", "Grassano", "MTIC808001"]]}, {"id": "MTIC810001", "n": "I.C PIETRELCINA-FLACCO PISTICCI", "tp": "Istituto Comprensivo", "ind": "Via Marco Polo S.N., 75015 Pisticci", "em": "mtic810001@istruzione.it", "pec": "", "w": "", "cs": ["Craco"], "pl": [["P.Pio Da Pietrelcina-Pisticci", "Scuola Primaria", "Pisticci", "MTEE810013"], ["Craco-Pisticci", "Scuola Infanzia", "Craco", "MTAA810063"], ["Scuola Infanzia Pisticci", "Scuola Infanzia", "Pisticci", "MTAA81001T"], ["Sc. Primaria Monreale-Pisticci", "Scuola Primaria", "Pisticci", "MTEE810057"], ["I Grado - Craco", "Scuola Primo Grado", "Craco", "MTMM810034"], ["Sc. Infanzia Ex Asilo-Marconia", "Scuola Infanzia", "Pisticci", "MTAA810085"], ["Sc. Primaria Sg. Bosco-Marconia", "Scuola Primaria", "Pisticci", "MTEE810079"], ["\"Pietrelcina- Flacco\"-Pisticci", "Scuola Primo Grado", "Pisticci", "MTMM810012"], ["Sc. Infanzia-Marconia", "Scuola Infanzia", "Pisticci", "MTAA810074"], ["Craco- Pisticci", "Scuola Primaria", "Craco", "MTEE810068"], ["Via Salerno-Pisticci", "Scuola Infanzia", "Pisticci", "MTAA810052"], ["I.C Pietrelcina-Flacco Pisticci", "Istituto Comprensivo", "Pisticci", "MTIC810001"]]}, {"id": "MTIC81100R", "n": "I. OMNICOMPRENSIVO-STIGLIANO", "tp": "Istituto Comprensivo", "ind": "Via Berardi 9, 75018 Stigliano", "em": "mtic81100r@istruzione.it", "pec": "", "w": "www.icstigliano.gov.it/", "cs": ["Accettura", "Aliano", "Gorgoglione", "Stigliano"], "pl": [["Aldo Moro-Accettura", "Scuola Primaria", "Accettura", "MTEE811064"], ["\"Padre Pio\"Accettura", "Scuola Primo Grado", "Accettura", "MTMM811041"], ["Via Della Vittoria-Aliano", "Scuola Primaria", "Aliano", "MTEE81102X"], ["\"E.Gianturco\"-Stigliano", "Scuola Primo Grado", "Stigliano", "MTMM81102V"], ["Via Berardi-Stigliano", "Scuola Infanzia", "Stigliano", "MTAA81101N"], ["Aliano-Ss Stigliano", "Scuola Primo Grado", "Aliano", "MTMM81101T"], ["Aliano-Stigliano", "Scuola Infanzia", "Aliano", "MTAA81103Q"], ["Accettura-Stigliano", "Scuola Infanzia", "Accettura", "MTAA81106V"], ["Gorgoglione-Stigliano", "Scuola Infanzia", "Gorgoglione", "MTAA81105T"], ["I. Omnicomprensivo-Stigliano", "Istituto Comprensivo", "Stigliano", "MTIC81100R"], ["Via Fontana-Gorgoglione", "Scuola Primaria", "Gorgoglione", "MTEE811053"], ["Via Berardi-Stigliano", "Scuola Primaria", "Stigliano", "MTEE811031"], ["Gorgoglione-Ss Stigliano", "Scuola Primo Grado", "Gorgoglione", "MTMM81103X"]]}, {"id": "MTIC81800G", "n": "I.C.\"F. D'ONOFRIO\"-FERRANDINA", "tp": "Istituto Comprensivo", "ind": "Via Lanzillotti, 75013 Ferrandina", "em": "mtic81800g@istruzione.it", "pec": "", "w": "www.istitutocomprensivoferrandina.edu.it", "cs": ["Ferrandina", "Salandra", "San Mauro Forte"], "pl": [["\"Ten.R.Davia\"-Salandra", "Scuola Primaria", "Salandra", "MTEE81803Q"], ["\"P. Serafino Da Salandra\"", "Scuola Primo Grado", "Salandra", "MTMM81802N"], ["San Mauro Forte", "Scuola Infanzia", "San Mauro Forte", "MTAA81805L"], ["Corso Dante-Salandra", "Scuola Infanzia", "Salandra", "MTAA81804G"], ["\"M.Lappano\" San Mauro Forte", "Scuola Primo Grado", "San Mauro Forte", "MTMM81803P"], ["Dante Calbi-San Mauro Forte", "Scuola Primaria", "San Mauro Forte", "MTEE81804R"], ["\"Giovanni Paolo Ii\"- Ferrandina", "Scuola Primo Grado", "Ferrandina", "MTMM81801L"], ["Via Caduti Di Kindu-Ferrandina", "Scuola Infanzia", "Ferrandina", "MTAA81801C"], ["Piazza Matteotti-Ferrandina", "Scuola Infanzia", "Ferrandina", "MTAA81802D"], ["F.D'Onofrio-Ic Ferrandina", "Scuola Primaria", "Ferrandina", "MTEE81801N"], ["I.C.\"F. D'Onofrio\"-Ferrandina", "Istituto Comprensivo", "Ferrandina", "MTIC81800G"]]}, {"id": "MTIC82100B", "n": "I.C. TRICARICO", "tp": "Scuola Primaria", "ind": "Via Roma, 75010 Calciano", "em": "mtic82100b@istruzione.it", "pec": "", "w": "www.iiscarlolevi.edu.it", "cs": ["Calciano", "Tricarico"], "pl": [["Calciano-Tricarico", "Scuola Primaria", "Calciano", "MTEE82104L"], ["Calciano", "Scuola Primo Grado", "Calciano", "MTMM82103E"], ["Viale Reg.Margherita-Tricarico", "Scuola Primaria", "Tricarico", "MTEE82101D"], ["I.C. Tricarico", "Istituto Comprensivo", "Tricarico", "MTIC82100B"], ["Via Marconi-Tricarico", "Scuola Infanzia", "Tricarico", "MTAA82103A"], ["Calciano-Tricarico", "Scuola Infanzia", "Calciano", "MTAA82105C"], ["Borgo S. Maria-Tricarico", "Scuola Infanzia", "Tricarico", "MTAA821018"], ["Tricarico", "Scuola Primo Grado", "Tricarico", "MTMM82101C"], ["Borgo S.Maria-Tricarico", "Scuola Primaria", "Tricarico", "MTEE82102E"]]}, {"id": "MTIC823003", "n": "I.C\"D.L.PALAZZO\"-MONTESCAGLIOSO", "tp": "Istituto Comprensivo", "ind": "Rione Marco Polo, 75024 Montescaglioso", "em": "mtic823003@istruzione.it", "pec": "", "w": "www.icmontescaglioso.edu.it/", "cs": ["Montescaglioso", "Pomarico"], "pl": [["I.C\"D.L.Palazzo\"-Montescaglioso", "Istituto Comprensivo", "Montescaglioso", "MTIC823003"], ["\"C. Salinari\"- Montescaglioso", "Scuola Primo Grado", "Montescaglioso", "MTMM823014"], ["Montescaglioso", "Scuola Infanzia", "Montescaglioso", "MTAA82301X"], ["Via Palermo-Montescaglioso", "Scuola Infanzia", "Montescaglioso", "MTAA823021"], ["Don L. Palazzo-Montescaglioso", "Scuola Primaria", "Montescaglioso", "MTEE823015"], ["Via S. Pellico-Montescaglioso", "Scuola Infanzia", "Montescaglioso", "MTAA823032"], ["Primaria- Pomarico", "Scuola Primaria", "Pomarico", "MTEE823037"], ["Largo D'Acquisto-Montescaglioso", "Scuola Infanzia", "Montescaglioso", "MTAA823043"], ["\"Don P.Spera\"-Pomarico", "Scuola Primo Grado", "Pomarico", "MTMM823025"], ["Infanzia Pomarico", "Scuola Infanzia", "Pomarico", "MTAA823054"], ["Largo D'Acquisto-Montescaglioso", "Scuola Primaria", "Montescaglioso", "MTEE823026"]]}, {"id": "MTIC82600E", "n": "SEMERIA-MINOZZI-FESTA", "tp": "Istituto Comprensivo", "ind": "Piazza Semeria, 75100 Matera", "em": "mtic82600e@istruzione.it", "pec": "", "w": "", "cs": ["Matera"], "pl": [["\"Angelo Dinardo\"-Irsina", "Scuola Primaria", "Irsina", "MTEE82605R"], ["Piazza Garibaldi- Irsina", "Scuola Infanzia", "Irsina", "MTAA82606L"], ["Collodi-Semeria Matera", "Scuola Infanzia", "Matera", "MTAA82605G"], ["La Martella-Semeria Matera", "Scuola Infanzia", "Matera", "MTAA82601B"], ["Primaria \"V. Caravelli\"-Irsina", "Scuola Primaria", "Irsina", "MTEE82604Q"], ["Semeria-Minozzi-Festa", "Istituto Comprensivo", "Matera", "MTIC82600E"], ["\"Alberto Manzi\"-Semeria Mt", "Scuola Primaria", "Matera", "MTEE82601L"], ["Vico Ii Cappelluti-Semeria Mt", "Scuola Primaria", "Matera", "MTEE82606T"], ["Vico Cappelluti-Semeria Mt", "Scuola Infanzia", "Matera", "MTAA82608P"], ["Infanzia Pezzi", "Scuola Infanzia", "Matera", "MTAA82604E"], ["G.Fortunato-Semeria Matera", "Scuola Infanzia", "Matera", "MTAA82603D"], ["\"P.A.M. Di Francia - Semeria Mt", "Scuola Infanzia", "Matera", "MTAA82602C"], ["Semeria-Minozzi-Festa", "Scuola Primo Grado", "Matera", "MTMM82601G"], ["Semeria-Matera", "Scuola Primaria", "Matera", "MTEE82602N"], ["\"G. Mascolo\" - Irsina", "Scuola Primo Grado", "Irsina", "MTMM82602L"], ["Padre Minozzi- Semeria Matera", "Scuola Infanzia", "Matera", "MTAA82609Q"], ["\"Don Lorenzo Milani\"-Semeria Mt", "Scuola Primaria", "Matera", "MTEE82603P"], ["Via Togliatti -Irsina", "Scuola Infanzia", "Irsina", "MTAA82607N"], ["Padre G.Minozzi- Semeria Mt", "Scuola Primaria", "Matera", "MTEE82607V"]]}, {"id": "MTIC82700A", "n": "I.C. \"G.PASCOLI\" -MATERA", "tp": "Istituto Comprensivo", "ind": "Via Parini 1, 75100 Matera", "em": "mtic82700a@istruzione.it", "pec": "", "w": "www.icpascolimatera.it", "cs": ["Matera"], "pl": [["Aldo Moro-Pascoli Mt", "Scuola Primaria", "Matera", "MTEE82701C"], ["I.C. \"G.Pascoli\" -Matera", "Istituto Comprensivo", "Matera", "MTIC82700A"], ["Via S.Giovanni-Pascoli Matera", "Scuola Infanzia", "Matera", "MTAA827028"], ["\"G.Pascoli\" - Matera", "Scuola Primo Grado", "Matera", "MTMM82701B"], ["Piazza F.S.Nitti-Pascoli Mt", "Scuola Primaria", "Matera", "MTEE82702D"], ["Via Lazazzera-Pascoli Matera", "Scuola Infanzia", "Matera", "MTAA827017"], ["Via Lucrezio-Pascoli Mt", "Scuola Primaria", "Matera", "MTEE82703E"]]}, {"id": "MTIC828006", "n": "IC \"ENRICO FERMI\" - MATERA", "tp": "Istituto Comprensivo", "ind": "Via Fermi 10, 75100 Matera", "em": "mtic828006@istruzione.it", "pec": "", "w": "www.comprensivofermimatera.edu.it", "cs": ["Matera"], "pl": [["Via Dei Sanniti- Fermi Matera", "Scuola Infanzia", "Matera", "MTAA828024"], ["\"E.Fermi\" - Matera", "Scuola Primo Grado", "Matera", "MTMM828017"], ["Sms Ospedaliera \"Fermi\"-Matera", "Scuola Primo Grado", "Matera", "MTMM828028"], ["Scuola Infanzia -Fermi Matera", "Scuola Infanzia", "Matera", "MTAA828046"], ["Ex 2 Circolo-Fermi Matera", "Scuola Primaria", "Matera", "MTEE828018"], ["Via Cosenza- Fermi Matera", "Scuola Infanzia", "Matera", "MTAA828035"], ["Via Meucci- Fermi Matera", "Scuola Infanzia", "Matera", "MTAA828013"], ["Ic \"Enrico Fermi\" - Matera", "Istituto Comprensivo", "Matera", "MTIC828006"], ["Scuola Ospedaliera-Fermi Matera", "Scuola Primaria", "Matera", "MTEE82803A"]]}, {"id": "MTIC829002", "n": "I.C. \"BRAMANTE-TORRACA\" MATERA", "tp": "Istituto Comprensivo", "ind": "Via Bramante 8, 75100 Matera", "em": "mtic829002@istruzione.it", "pec": "", "w": "www.istitutocomprensivo6mt.edu.it/", "cs": ["Matera"], "pl": [["Via Greco", "Scuola Primaria", "Matera", "MTEE829014"], ["\"Bramante - Torraca\" - Matera", "Scuola Primo Grado", "Matera", "MTMM829013"], ["Via Bramante", "Scuola Primaria", "Matera", "MTEE829025"], ["I.C. \"Bramante-Torraca\" Matera", "Istituto Comprensivo", "Matera", "MTIC829002"], ["Marconi", "Scuola Primaria", "Matera", "MTEE829036"], ["Via Bramante", "Scuola Infanzia", "Matera", "MTAA82902X"], ["Via Greco", "Scuola Infanzia", "Matera", "MTAA82901V"], ["Rodari", "Scuola Infanzia", "Matera", "MTAA829031"]]}, {"id": "MTIC83400D", "n": "I.C. VALSINNI - TURSI", "tp": "Istituto Comprensivo", "ind": "Via G. Fortunato 6, 75029 Valsinni", "em": "mtic83400d@istruzione.it", "pec": "", "w": "www.icmorra.edu.it", "cs": ["San Giorgio Lucano"], "pl": [["Rotondella Due-Valsinni", "Scuola Infanzia", "Rotondella", "MTAA83404D"], ["\"Giovanni Xxiii\"- Rotondella", "Scuola Primo Grado", "Rotondella", "MTMM83404N"], ["Colobraro-Valsinni", "Scuola Infanzia", "Colobraro", "MTAA83403C"], ["\"I.Morra\"-Valsinni-S.Giorgio L.", "Scuola Primo Grado", "San Giorgio Lucano", "MTMM83402G"], ["San Giorgio Lucano-Valsinni", "Scuola Primaria", "San Giorgio Lucano", "MTEE83402L"], ["\"S.Andrea Avellino\" - Tursi", "Scuola Primo Grado", "Tursi", "MTMM83405P"], ["\"I.Morra\"-Valsinni-Colobraro", "Scuola Primo Grado", "Colobraro", "MTMM83403L"], ["Santi Quaranta-Tursi", "Scuola Infanzia", "Tursi", "MTAA83407L"], ["\"I.Morra\"- Valsinni", "Scuola Primo Grado", "Valsinni", "MTMM83401E"], ["Rotondella-Valsinni", "Scuola Primaria", "Rotondella", "MTEE83405Q"], ["Via Ugo Foscolo-Valsinni", "Scuola Infanzia", "Valsinni", "MTAA83401A"], ["Sant' Anna-Tursi", "Scuola Infanzia", "Tursi", "MTAA83406G"], ["Rotondella Centro-Valsinni", "Scuola Infanzia", "Rotondella", "MTAA83405E"], ["\"Isabella Morra\"-Valsinni", "Scuola Primaria", "Valsinni", "MTEE83401G"], ["Colobraro-Valsinni", "Scuola Primaria", "Colobraro", "MTEE83403N"], ["I.C. Valsinni - Tursi", "Istituto Comprensivo", "Valsinni", "MTIC83400D"], ["San Giorgio Lucano-Valsinni", "Scuola Infanzia", "San Giorgio Lucano", "MTAA83402B"], ["\"Albino Pierro\"-Tursi", "Scuola Primaria", "Tursi", "MTEE83406R"]]}, {"id": "MTIS002006", "n": "I.I.S.\"FELICE ALDERISIO\"- I.O. STIGLIANO", "tp": "Istituto Magistrale", "ind": "Via Berardi 9, 75018 Stigliano", "em": "mtis002006@istruzione.it", "pec": "", "w": "www.icstigliano.edu.it", "cs": ["Stigliano"], "pl": [["Istituto Omnicomprensivo Di Stigliano", "Istituto Magistrale", "Stigliano", "MTPM00201N"], ["I.I.S.\"Felice Alderisio\"- I.O. Stigliano", "Istituto Superiore", "Stigliano", "MTIS002006"], ["Istituto Omnicomprensivo Di Stigliano", "Ist Prof Industria E Artigianato", "Stigliano", "MTRI002506"], ["Istituto Omnicomprensivo Di Stigliano", "Ist Prof Industria E Artigianato", "Stigliano", "MTRI00201T"]]}, {"id": "MTIS00400T", "n": "ISTITUTO OMNICOMPRENSIVO - TRICARICO", "tp": "Istituto Superiore", "ind": "Via Appia Snc, 75019 Tricarico", "em": "mtis00400t@istruzione.it", "pec": "", "w": "www.iiscarlolevi.gov.it", "cs": ["Garaguso", "Grassano", "Tricarico"], "pl": [["Istituto Omnicomprensivo - Tricarico", "Istituto Superiore", "Tricarico", "MTIS00400T"], ["L.Scient. A Iis \"C.Levi\" - Tricarico", "Liceo Scientifico", "Tricarico", "MTPS004018"], ["Ist. Tec. Econ. \"C. Levi\" -Grassano", "Istituto Tecnico Commerciale", "Grassano", "MTTD004014"], ["L.Scient. Ass. A Iis \"C.Levi\" -Irsina", "Liceo Scientifico", "Irsina", "MTPS004029"], ["I.P.Agr.\"E.Pantanelli\"-Garaguso", "Ist Prof Per L'Agricoltura E L'Ambiente", "Garaguso", "MTRA00401T"], ["Sc.Um Sede Ass. A Iis \"C.Levi\"-Tricarico", "Istituto Magistrale", "Tricarico", "MTPM004019"], ["I.P.Agr. E Amb. Corso Serale-Garaguso", "Ist Prof Per L'Agricoltura E L'Ambiente", "Garaguso", "MTRA004506"]]}, {"id": "MTIS01200R", "n": "I.I.S. \" G.B. PENTASUGLIA \" -MATERA", "tp": "Istituto Superiore", "ind": "Via E. Mattei S.N.C., 75100 Matera", "em": "mtis01200r@istruzione.it", "pec": "", "w": "www.iispentasuglia.edu.it", "cs": ["Matera"], "pl": [["I.Tec. Ind. \" G.B. Pentasuglia \" -Matera", "Istituto Tecnico Industriale", "Matera", "MTTF012019"], ["I.I.S. \" G.B. Pentasuglia \" -Matera", "Istituto Superiore", "Matera", "MTIS01200R"], ["Corso Serale- I.I.S. G.B. Pentasuglia", "Istituto Tecnico Industriale", "Matera", "MTTF01250N"], ["L.Scient.\"G.B.Pentasuglia\" -Matera", "Liceo Scientifico", "Matera", "MTPS012017"]]}, {"id": "MTIS01300L", "n": "I.I.S. \"DUNI - LEVI\" - MATERA", "tp": "Istituto Superiore", "ind": "Via Cappuccini27, 75100 Matera", "em": "mtis01300l@istruzione.it", "pec": "", "w": "www.dunilevimatera.edu.it", "cs": ["Matera"], "pl": [["L.Art. \"Duni-Levi\" -Matera", "Liceo Artistico", "Matera", "MTSL01301X"], ["L. Clas. \"Duni-Levi\" - Matera", "Liceo Classico", "Matera", "MTPC01301X"], ["I.I.S. \"Duni - Levi\" - Matera", "Istituto Superiore", "Matera", "MTIS01300L"]]}, {"id": "MTIS01400C", "n": "I.I.S. \"A. TURI - I. MORRA\" MATERA", "tp": "Istituto Superiore", "ind": "Via Biagio Matarazzo S.N.C., 75100 Matera", "em": "mtis01400c@istruzione.it", "pec": "", "w": "www.turimatera.edu.it", "cs": ["Matera"], "pl": [["Ip Sss Corso Serale Iis Morra Mt", "Ist Prof Per I Servizi Sociali", "Matera", "MTRF01451E"], ["I.T.A. Corso Serale Turi - Matera", "Istituto Tecnico Agrario", "Matera", "MTTA01450L"], ["Ip Mat Corso Serale Iis Morra Mt", "Ist Prof Industria E Artigianato", "Matera", "MTRI01451D"], ["Ip Serv. Alb. E Rist \"Turi\" Corso Serale", "Ist Prof Per I Servizi Alberghieri E Ristorazione", "Matera", "MTRH014501"], ["I.P. Per Serv.Soc.\"I. Morra\" - Matera", "Ist Prof Per I Servizi Sociali", "Matera", "MTRF014015"], ["I.P. Artig.\"L.Da Vinci\"-\"I.Morra\" Matera", "Ist Prof Industria E Artigianato", "Matera", "MTRI014014"], ["I.I.S. \"A. Turi - I. Morra\" Matera", "Istituto Superiore", "Matera", "MTIS01400C"], ["Ip Serv.Alb. E Rist. \"A.Turi\" - Matera", "Ist Prof Per I Servizi Alberghieri E Ristorazione", "Matera", "MTRH01401L"], ["I.Tec.Agr.\"G. Briganti\" Turi Matera", "Istituto Tecnico Agrario", "Matera", "MTTA014018"]]}, {"id": "MTIS016004", "n": "I.I.S. BERNALDA - FERRANDINA", "tp": "Istituto Superiore", "ind": "Via Schwartz, 75012 Bernalda", "em": "mtis016004@istruzione.it", "pec": "", "w": "www.iisbernaldaferrandina.edu.it", "cs": ["Ferrandina"], "pl": [["I.T. Comm. E Geom.- Bernalda", "Istituto Tecnico Commerciale", "Bernalda", "MTTD01601A"], ["I.P. Ind.Art.\"F. Cassola\"-Ferrandina", "Ist Prof Industria E Artigianato", "Ferrandina", "MTRI01601Q"], ["Ip Ind.Art.F. Corso Serale -Ferrandina", "Ist Prof Industria E Artigianato", "Ferrandina", "MTRI016504"], ["I.T.Comm.G. -Corso Serale-Bernalda", "Istituto Tecnico Commerciale", "Bernalda", "MTTD01651Q"], ["L.Scient. \"F. Cassola\" -Ferrandina", "Liceo Scientifico", "Ferrandina", "MTPS01602G"], ["L.Scientifico \"M. Parisi\" -Bernalda", "Liceo Scientifico", "Bernalda", "MTPS01601E"], ["I.I.S. Bernalda - Ferrandina", "Istituto Superiore", "Bernalda", "MTIS016004"], ["I.Tec.Ind.\"F. Cassola\"-Ferrandina", "Istituto Tecnico Industriale", "Ferrandina", "MTTF01601L"]]}, {"id": "MTMM107003", "n": "CPIA DI MATERA", "tp": "Scuola Primo Grado", "ind": "Via Matarazzo, 75100 Matera", "em": "mtmm107003@istruzione.it", "pec": "", "w": "", "cs": ["Matera", "Stigliano"], "pl": [["Ctp - Matera", "Centro Territoriale", "Matera", "MTCT700007"], ["Ctp Policoro", "Centro Territoriale", "Policoro", "MTCT70200V"], ["Casa Circondariale I Grado", "Scuola Primo Grado", "Matera", "MTMM70001E"], ["Casa Circondariale - Matera", "Scuola Primaria", "Matera", "MTEE70001G"], ["Ctp Bernalda- Metaponto", "Centro Territoriale", "Bernalda", "MTCT706006"], ["Cpia Di Matera", "Scuola Primo Grado", "Matera", "MTMM107003"], ["Ctp -Marconia", "Centro Territoriale", "Pisticci", "MTCT701003"], ["Ctp Irsina", "Centro Territoriale", "Matera", "MTCT70500A"], ["Ctp Gorgoglione", "Centro Territoriale", "Stigliano", "MTCT70400E"]]}, {"id": "MTPM01000G", "n": "LICEO \"T. STIGLIANI\" -MATERA", "tp": "Istituto Magistrale", "ind": "Via Lanera 61, 75100 Matera", "em": "mtpm01000g@istruzione.it", "pec": "", "w": "www.liceotommasostigliani.edu.it/", "cs": ["Matera"], "pl": [["Liceo \"T. Stigliani\" -Matera", "Istituto Magistrale", "Matera", "MTPM01000G"]]}, {"id": "MTPS01000E", "n": "L. SCIENT.\"DANTE ALIGHIERI\" - MATERA", "tp": "Liceo Scientifico", "ind": "Viale Delle Nazioni Unite2, 75100 Matera", "em": "mtps01000e@istruzione.it", "pec": "", "w": "www.liceoscientificomatera.edu.it/", "cs": ["Matera"], "pl": [["L. Scient.\"Dante Alighieri\" - Matera", "Liceo Scientifico", "Matera", "MTPS01000E"]]}, {"id": "MTTD06000B", "n": "I.T.COMM.GEOM.\"LOPERFIDO - OLIVETTI\"-MT", "tp": "Ist Tec Commerciale E Per Geometri", "ind": "Via Aldo Moro28, 75100 Matera", "em": "mttd06000b@istruzione.it", "pec": "", "w": "www.loperfido-olivetti.edu.it", "cs": ["Matera"], "pl": [["I.T.C.G. \"L. Olivetti\"- Corso Serale", "Istituto Tecnico Commerciale", "Matera", "MTTD06050R"], ["Casa Circondariale \"L.Olivetti\"-Matera", "Ist Tec Commerciale E Per Geometri", "Matera", "MTTD06001C"], ["I.T.Comm.Geom.\"Loperfido - Olivetti\"-Mt", "Ist Tec Commerciale E Per Geometri", "Matera", "MTTD06000B"]]}, {"id": "MTVC020009", "n": "CONVITTO ANNESSO AL \"TURI\" MATERA", "tp": "Convitto Annesso", "ind": "Via Castello 19, 75100 Matera", "em": "mtvc020009@istruzione.it", "pec": "", "w": "", "cs": ["Matera"], "pl": [["Convitto Annesso Al \"Turi\" Matera", "Convitto Annesso", "Matera", "MTVC020009"]]}, {"id": "PZIC815001", "n": "I.C. RAPOLLA-BARILE", "tp": "Istituto Comprensivo", "ind": "Corso Italia N. 2, 85027 Rapolla", "em": "pzic815001@istruzione.it", "pec": "", "w": "www.icrapolla.gov.it/", "cs": ["Barile", "Rapolla", "Ripacandida"], "pl": [["Infanzia Ripacandida", "Scuola Infanzia", "Ripacandida", "PZAA81503X"], ["Primaria I.C. Rapolla", "Scuola Primaria", "Rapolla", "PZEE815013"], ["Primaria Barile", "Scuola Primaria", "Barile", "PZEE815024"], ["\"M.Anastasia\" Ripacandida", "Scuola Primo Grado", "Ripacandida", "PZMM815045"], ["\"G. Gentile\" - Ripacandida", "Scuola Primaria", "Ripacandida", "PZEE815035"], ["Barile-C.So Alcide De Gasperi", "Scuola Infanzia", "Barile", "PZAA81502V"], ["I.C. Rapolla-Barile", "Istituto Comprensivo", "Rapolla", "PZIC815001"], ["I Grado - I.C. Rapolla", "Scuola Primo Grado", "Rapolla", "PZMM815023"], ["\"Giovanni Xxiii\" - Barile", "Scuola Primo Grado", "Barile", "PZMM815034"], ["Scuola Dell'Infanzia - Rapolla", "Scuola Infanzia", "Rapolla", "PZAA81501T"]]}, {"id": "PZIC82000C", "n": "I.C. OPPIDO-TOLVE-PIETRAGALLA", "tp": "Istituto Comprensivo", "ind": "Piazza S. D'Acquisto N.5, 85015 Oppido Lucano", "em": "pzic82000c@istruzione.it", "pec": "", "w": "icoppidolucano.edu.it", "cs": ["Acerenza", "Cancellara", "Oppido Lucano", "Pietragalla", "San Chirico Nuovo", "Tolve"], "pl": [["Infanzia Tolve", "Scuola Infanzia", "Tolve", "PZAA82004C"], ["\"Mons. Cavalla\" Acerenza", "Scuola Primo Grado", "Acerenza", "PZMM82006P"], ["Oronzo Albanese - Tolve", "Scuola Primaria", "Tolve", "PZEE82003L"], ["Cancellara-Via Vaglio", "Scuola Infanzia", "Cancellara", "PZAA82002A"], ["Scuola Dell'Infanzia - Oppido", "Scuola Infanzia", "Oppido Lucano", "PZAA820019"], ["Pietragalla Centro", "Scuola Infanzia", "Pietragalla", "PZAA82005D"], ["Primaria - Pietragalla", "Scuola Primaria", "Pietragalla", "PZEE82005P"], ["\"Mario Zotta\"- Pietragalla", "Scuola Primo Grado", "Pietragalla", "PZMM82005N"], ["I Grado San Chirico Nuovo", "Scuola Primo Grado", "San Chirico Nuovo", "PZMM82003G"], ["San Chirico Nuovo", "Scuola Primaria", "San Chirico Nuovo", "PZEE82004N"], ["\"Don G.Ppe Libutti\" Cancellara", "Scuola Primo Grado", "Cancellara", "PZMM82002E"], ["F. Giannone - I.C. Oppido L.", "Scuola Primo Grado", "Oppido Lucano", "PZMM82001D"], ["Primaria Pestolazzi - Acerenza", "Scuola Primaria", "Acerenza", "PZEE82006Q"], ["Acerenza-Piani Maddalena", "Scuola Infanzia", "Acerenza", "PZAA82006E"], ["Infanzia - San Chirico Nuovo", "Scuola Infanzia", "San Chirico Nuovo", "PZAA82003B"], ["\"F.Frisi\" - Cancellara", "Scuola Primaria", "Cancellara", "PZEE82002G"], ["P.F.Grimaldi - Ic Oppido Lucano", "Scuola Primaria", "Oppido Lucano", "PZEE82001E"], ["I.C. Oppido-Tolve-Pietragalla", "Istituto Comprensivo", "Oppido Lucano", "PZIC82000C"], ["I Grado \"E.Ciccotti\" Tolve", "Scuola Primo Grado", "Tolve", "PZMM82004L"]]}, {"id": "PZIC821008", "n": "I.C.\"ALFIERI\" LAURENZANA-ALBANO", "tp": "Istituto Comprensivo", "ind": "Via Prato, 85014 Laurenzana", "em": "pzic821008@istruzione.it", "pec": "", "w": "www.icalfierilaurenzana.edu.it/", "cs": ["Brindisi Montagna"], "pl": [["Campomaggiore", "Scuola Primaria", "Campomaggiore", "PZEE82106G"], ["Castelmezzano-Conte Campagna", "Scuola Infanzia", "Castelmezzano", "PZAA821048"], ["Infanzia Laurenzana", "Scuola Infanzia", "Laurenzana", "PZAA821015"], ["I Grado Albano Di Luc.", "Scuola Primo Grado", "Albano Di Lucania", "PZMM82104C"], ["Trivigno", "Scuola Primaria", "Trivigno", "PZEE82105E"], ["I G. \"F.Torraca\" Pietrapertosa", "Scuola Primo Grado", "Pietrapertosa", "PZMM82108L"], ["Campomaggiore\"Papa Giov.Xxiii\"", "Scuola Infanzia", "Campomaggiore", "PZAA821037"], ["Scuola Infanzia - Calvello", "Scuola Infanzia", "Calvello", "PZAA82108C"], ["Scuola Elementare Calvello", "Scuola Primaria", "Calvello", "PZEE82103C"], ["Scuola Infanzia - Anzi", "Scuola Infanzia", "Anzi", "PZAA82107B"], ["I Grado Castelmezzano", "Scuola Primo Grado", "Castelmezzano", "PZMM82107G"], ["Pietrapertosa Capoluogo", "Scuola Infanzia", "Pietrapertosa", "PZAA821059"], ["Albano Di Lucaniacapoluogo", "Scuola Infanzia", "Albano Di Lucania", "PZAA821026"], ["\"G Pascoli\" Anzi", "Scuola Primo Grado", "Anzi", "PZMM82102A"], ["I Grado Brindisi Montagna", "Scuola Primo Grado", "Brindisi Montagna", "PZMM82109N"], ["Pietrapertosa", "Scuola Primaria", "Pietrapertosa", "PZEE82108N"], ["Ist.Compr. Alfieri Laurenzana", "Scuola Primo Grado", "Laurenzana", "PZMM821019"], ["Brindisi Di Montagna Cap.", "Scuola Infanzia", "Brindisi Montagna", "PZAA82106A"], ["Scuola Media Calvello", "Scuola Primo Grado", "Calvello", "PZMM82103B"], ["Castelmezzano", "Scuola Primaria", "Castelmezzano", "PZEE82107L"], ["Trivigno", "Scuola Primo Grado", "Trivigno", "PZMM82105D"], ["I.C.\"Alfieri\" Laurenzana-Albano", "Istituto Comprensivo", "Laurenzana", "PZIC821008"], ["Albano Di Lucania", "Scuola Primaria", "Albano Di Lucania", "PZEE82104D"], ["Brindisi Di Montagna", "Scuola Primaria", "Brindisi Montagna", "PZEE82109P"], ["Primaria - I.C. Laurenzana", "Scuola Primaria", "Laurenzana", "PZEE82101A"], ["I Grado Campomaggiore", "Scuola Primo Grado", "Campomaggiore", "PZMM82106E"], ["Anzi \"R. De Stefano\"", "Scuola Primaria", "Anzi", "PZEE82102B"]]}, {"id": "PZIC828003", "n": "I.C. ROTONDA-VIGGIANELLO", "tp": "Istituto Comprensivo", "ind": "Via Pietro Nenni, 85048 Rotonda", "em": "pzic828003@istruzione.it", "pec": "", "w": "", "cs": ["Castelluccio Inferiore", "Rotonda", "San Severino Lucano", "Viggianello"], "pl": [["Celestino Pr. Castelluccio Inf.", "Scuola Primaria", "Castelluccio Inferiore", "PZEE828037"], ["Infanzia - Viggianello", "Scuola Infanzia", "Viggianello", "PZAA828043"], ["Mezzana Salice-S.Severino L.", "Scuola Primaria", "San Severino Lucano", "PZEE82807B"], ["Primaria San Severino Lucano", "Scuola Primaria", "San Severino Lucano", "PZEE82806A"], ["\"N.Germano\" San Severino L.", "Scuola Primo Grado", "San Severino Lucano", "PZMM828058"], ["Primaria - Viggianello", "Scuola Primaria", "Viggianello", "PZEE828059"], ["Infanzia Rotonda", "Scuola Infanzia", "Rotonda", "PZAA828021"], ["I Grado Castelluccio Inf.", "Scuola Primo Grado", "Castelluccio Inferiore", "PZMM828025"], ["I Grado - Viggianello", "Scuola Primo Grado", "Viggianello", "PZMM828047"], ["S.Severino Lucano-V.S.Vincenzo", "Scuola Infanzia", "San Severino Lucano", "PZAA828054"], ["Primaria - I.C. Rotonda", "Scuola Primaria", "Rotonda", "PZEE828015"], ["I Grado - I.C. Rotonda", "Scuola Primo Grado", "Rotonda", "PZMM828014"], ["I.C. Rotonda-Viggianello", "Istituto Comprensivo", "Rotonda", "PZIC828003"], ["Castelluccio Inf.-Via Gramsci", "Scuola Infanzia", "Castelluccio Inferiore", "PZAA828032"]]}, {"id": "PZIC857003", "n": "I.C. \"S.G. BOSCO\" PALAZZO S. G.", "tp": "Istituto Comprensivo", "ind": "Piazza Caduti 22-23, 85026 Palazzo San Gervasio", "em": "pzic857003@istruzione.it", "pec": "", "w": "www.icpalazzo.edu.it", "cs": ["Forenza", "Maschito", "Montemilone", "Palazzo San Gervasio"], "pl": [["\"G.Galilei\" - I.C. Palazzo S.G.", "Scuola Primo Grado", "Palazzo San Gervasio", "PZMM857014"], ["Palazzo S.Gervasio-Rione Pola-", "Scuola Infanzia", "Palazzo San Gervasio", "PZAA85701X"], ["Infanzia Maschito", "Scuola Infanzia", "Maschito", "PZAA857054"], ["\"E. Lopez\" Forenza", "Scuola Primaria", "Forenza", "PZEE857037"], ["\"Don Bosco\" I.C. Palazzo S. G.", "Scuola Primaria", "Palazzo San Gervasio", "PZEE857015"], ["I.C. \"S.G. Bosco\" Palazzo S. G.", "Istituto Comprensivo", "Palazzo San Gervasio", "PZIC857003"], ["\"Iv Novembre\" - Maschito", "Scuola Primaria", "Maschito", "PZEE857048"], ["Auditorium Don Bosco-Palazzo Sg", "Scuola Infanzia", "Palazzo San Gervasio", "PZAA857021"], ["\"Fortunato\" Montemilone", "Scuola Primo Grado", "Montemilone", "PZMM857025"], ["\"Giura\" Maschito", "Scuola Primo Grado", "Maschito", "PZMM857047"], ["\"Ten.M.Acciani\" Montemilone", "Scuola Primaria", "Montemilone", "PZEE857026"], ["Forenza Via Convento", "Scuola Infanzia", "Forenza", "PZAA857043"], ["\"Bochicchio\" - Forenza", "Scuola Primo Grado", "Forenza", "PZMM857036"], ["Montemilone-Edificio Acciani", "Scuola Infanzia", "Montemilone", "PZAA857032"]]}, {"id": "PZIC85900P", "n": "I.C. PIGNOLA", "tp": "Istituto Comprensivo", "ind": "Via C. Colombo 1, 85010 Pignola", "em": "pzic85900p@istruzione.it", "pec": "", "w": "www.istitutocomprensivopignola.edu.it", "cs": ["Pignola"], "pl": [["Pignola-Capoluogo", "Scuola Infanzia", "Pignola", "PZAA85902L"], ["Pignola-Fraz. Tora", "Scuola Infanzia", "Pignola", "PZAA85904P"], ["I Grado \"G.Pascoli\" Pignola", "Scuola Primo Grado", "Pignola", "PZMM85901Q"], ["Pignola-Fraz. Pantano", "Scuola Infanzia", "Pignola", "PZAA85903N"], ["Pignola - Fraz. Pantano", "Scuola Primaria", "Pignola", "PZEE85902T"], ["Abriola", "Scuola Infanzia", "Abriola", "PZAA85901G"], ["Abriola", "Scuola Primaria", "Abriola", "PZEE85903V"], ["Pignola-Capoluogo", "Scuola Primaria", "Pignola", "PZEE85901R"], ["I Grado \"G. Pascoli\" Abriola", "Scuola Primo Grado", "Abriola", "PZMM85902R"], ["I.C. Pignola", "Istituto Comprensivo", "Pignola", "PZIC85900P"]]}, {"id": "PZIC86200E", "n": "I.C. PICERNO", "tp": "Istituto Comprensivo", "ind": "Via Aldo Moro S.N.C, 85055 Picerno", "em": "pzic86200e@istruzione.it", "pec": "", "w": "www.icpicerno.edu.it", "cs": ["Picerno"], "pl": [["Picerno \"Arcobaleno\"", "Scuola Infanzia", "Picerno", "PZAA86201B"], ["Primaria - I.C. Picerno", "Scuola Primaria", "Picerno", "PZEE86201L"], ["Vietri Di Potenza", "Scuola Primaria", "Vietri Di Potenza", "PZEE86203P"], ["I Grado \"Alighieri\" Vietri", "Scuola Primo Grado", "Vietri Di Potenza", "PZMM86202L"], ["Vietri Di Pz-C/So V. Emanuele", "Scuola Infanzia", "Vietri Di Potenza", "PZAA86202C"], ["I.C. Picerno", "Istituto Comprensivo", "Picerno", "PZIC86200E"], ["I Grado \"Fortunato\" Ic Picerno", "Scuola Primo Grado", "Picerno", "PZMM86201G"]]}, {"id": "PZIC86300A", "n": "I.C. TITO", "tp": "Istituto Comprensivo", "ind": "Via San Vito N. 287, 85050 Tito", "em": "pzic86300a@istruzione.it", "pec": "", "w": "www.ictito.it", "cs": ["Tito"], "pl": [["I Grado \"G.Pascoli\" I.C. Tito", "Scuola Primo Grado", "Tito", "PZMM86301B"], ["I.C. Tito", "Istituto Comprensivo", "Tito", "PZIC86300A"], ["Tito Fraz. \"Scalo\"", "Scuola Primaria", "Tito", "PZEE86302D"], ["Tito-Via Umberto I E Convento", "Scuola Infanzia", "Tito", "PZAA863039"], ["Primaria - I.C. Tito", "Scuola Primaria", "Tito", "PZEE86301C"], ["Tito-Fraz.Scalo", "Scuola Infanzia", "Tito", "PZAA863028"]]}, {"id": "PZIC869009", "n": "I.C. GENZANO DI LUCANIA", "tp": "Istituto Comprensivo", "ind": "Via Nino Bixio 1, 85013 Genzano Di Lucania", "em": "pzic869009@istruzione.it", "pec": "", "w": "www.icgenzanodilucania.edu.it", "cs": ["Banzi", "Genzano di Lucania"], "pl": [["I.C. Genzano Di Lucania", "Istituto Comprensivo", "Genzano di Lucania", "PZIC869009"], ["\"S.G.Bosco\" Banzi", "Scuola Primo Grado", "Banzi", "PZMM86902B"], ["Genzano Di Lucania", "Scuola Infanzia", "Genzano di Lucania", "PZAA869016"], ["Banzi", "Scuola Infanzia", "Banzi", "PZAA869027"], ["Banzi", "Scuola Primaria", "Banzi", "PZEE86902C"], ["Primaria I.C.Genzano Di Lucania", "Scuola Primaria", "Genzano di Lucania", "PZEE86901B"], ["\"Papa Roncalli\" Ic Genzano Di L", "Scuola Primo Grado", "Genzano di Lucania", "PZMM86901A"]]}, {"id": "PZIC87000D", "n": "I.C. SPAVENTA FILIPPI AVIGLIANO", "tp": "Istituto Comprensivo", "ind": "Via A. Milano Snc, 85021 Avigliano", "em": "pzic87000d@istruzione.it", "pec": "", "w": "www.comprensivoaviglianocentro.edu.it", "cs": ["Avigliano", "Filiano", "Pietragalla"], "pl": [["I Grado San Giorgio", "Scuola Primo Grado", "Pietragalla", "PZMM87003L"], ["Avigliano-Possidente", "Scuola Primaria", "Avigliano", "PZEE87004P"], ["Avigliano-Lagopesole", "Scuola Primaria", "Avigliano", "PZEE87003N"], ["Avigliano-Sant'Angelo", "Scuola Primaria", "Avigliano", "PZEE87005Q"], ["Avigliano-Possidente", "Scuola Infanzia", "Avigliano", "PZAA87006G"], ["I Grado Filiano", "Scuola Primo Grado", "Filiano", "PZMM87002G"], ["\"G. Carducci\" Ic Avigliano", "Scuola Primo Grado", "Avigliano", "PZMM87001E"], ["I.C. Spaventa Filippi Avigliano", "Scuola Infanzia", "Avigliano", "PZAA87003C"], ["Avigliano-Sant'Angelo", "Scuola Infanzia", "Avigliano", "PZAA87007L"], ["Morlino-Ic S.F. Avigliano", "Scuola Primaria", "Avigliano", "PZEE87001G"], ["Scuola Dell'Infanzia - Filiano", "Scuola Infanzia", "Filiano", "PZAA87008N"], ["I.C. Spaventa Filippi Avigliano", "Istituto Comprensivo", "Avigliano", "PZIC87000D"], ["Avigliano-Lagopesole", "Scuola Infanzia", "Avigliano", "PZAA87005E"], ["Pietragalla-Fraz.Cappelluccia/L", "Scuola Infanzia", "Pietragalla", "PZAA87009P"], ["Scuola Primaria -Filiano", "Scuola Primaria", "Filiano", "PZEE87006R"], ["Pietragalla Fraz. \"S.Giorgio\"", "Scuola Primaria", "Pietragalla", "PZEE87007T"]]}, {"id": "PZIC87400R", "n": "I.C. \"CASTRONUOVO\" S. ARCANGELO", "tp": "Istituto Comprensivo", "ind": "Viale Italia S.N.C., 85037 Sant'Arcangelo", "em": "pzic87400r@istruzione.it", "pec": "", "w": "www.comprensivocastronuovo.edu.it", "cs": ["Armento", "Gallicchio", "Missanello", "Roccanova", "San Chirico Raparo", "Sant'Arcangelo"], "pl": [["Primaria San Chirico Raparo", "Scuola Primaria", "San Chirico Raparo", "PZEE874053"], ["I Grado S.Arcangelo", "Scuola Primo Grado", "Sant'Arcangelo", "PZMM87401T"], ["Primaria - Armento", "Scuola Primaria", "Armento", "PZEE87412B"], ["Scuola Dell'Infanzia - Armento", "Scuola Infanzia", "Armento", "PZAA874137"], ["Primaria San Martino D'Agri", "Scuola Primaria", "San Martino D'Agri", "PZEE87411A"], ["Primaria P. Lacava-Corleto P.", "Scuola Primaria", "Corleto Perticara", "PZEE874097"], ["Primaria A. Olivetti-Guardia P.", "Scuola Primaria", "Guardia Perticara", "PZEE874109"], ["\"A. Olivetti\" Guardia Perticara", "Scuola Primo Grado", "Guardia Perticara", "PZMM874096"], ["Infanzia - Corleto Perticara", "Scuola Infanzia", "Corleto Perticara", "PZAA874104"], ["I Grado - Armento", "Scuola Primo Grado", "Armento", "PZMM87412A"], ["I.C. \"Castronuovo\" S. Arcangelo", "Istituto Comprensivo", "Sant'Arcangelo", "PZIC87400R"], ["Infanzia San Chirico Raparo", "Scuola Infanzia", "San Chirico Raparo", "PZAA87405T"], ["\"G.Paladino\" S.Chirico Raparo", "Scuola Primo Grado", "San Chirico Raparo", "PZMM874074"], ["Infanzia Castelsaraceno", "Scuola Infanzia", "Castelsaraceno", "PZAA87404R"], ["I Grado San Martino D'Agri", "Scuola Primo Grado", "San Martino D'Agri", "PZMM874119"], ["Roccanova \"Zanotti Bianco\"", "Scuola Primaria", "Roccanova", "PZEE874086"], ["Primaria Castelsaraceno", "Scuola Primaria", "Castelsaraceno", "PZEE874042"], ["\"G. Pascoli\" Corleto Perticara", "Scuola Primo Grado", "Corleto Perticara", "PZMM874108"], ["S.Brancato - Ic S. Arcangelo", "Scuola Primaria", "Sant'Arcangelo", "PZEE874031"], ["Infanzia - Guardia Perticara", "Scuola Infanzia", "Guardia Perticara", "PZAA874115"], ["\"F.Torraca\" Roccanova", "Scuola Primo Grado", "Roccanova", "PZMM874085"], ["San Brancato Via L. Da Vinci", "Scuola Infanzia", "Sant'Arcangelo", "PZAA87403Q"], ["San Brancato Via G. Verga-S.A.", "Scuola Infanzia", "Sant'Arcangelo", "PZAA87407X"], ["Primaria Missanello", "Scuola Primaria", "Missanello", "PZEE874075"], ["Infanzia Gallicchio", "Scuola Infanzia", "Gallicchio", "PZAA874148"], ["S.Antonio Abate - S.Arcangelo", "Scuola Infanzia", "Sant'Arcangelo", "PZAA87406V"], ["\"Aldo Moro\" Gallicchio", "Scuola Primo Grado", "Gallicchio", "PZMM87413B"], ["Gallicchio", "Scuola Primaria", "Gallicchio", "PZEE87413C"], ["Infanzia San Martino D'Agri", "Scuola Infanzia", "San Martino D'Agri", "PZAA874126"], ["Infanzia Missanello", "Scuola Infanzia", "Missanello", "PZAA874092"], ["I G.\"C.Fontana\" Castelsaraceno", "Scuola Primo Grado", "Castelsaraceno", "PZMM874063"], ["Primaria Ex Cd Sant'Arcangelo", "Scuola Primaria", "Sant'Arcangelo", "PZEE874064"], ["Roccanova", "Scuola Infanzia", "Roccanova", "PZAA874081"]]}, {"id": "PZIC878004", "n": "I.C. \"DON BOSCO\" FRANCAVILLA", "tp": "Istituto Comprensivo", "ind": "Via M.Cosentino 190, 85034 Francavilla In Sinni", "em": "pzic878004@istruzione.it", "pec": "", "w": "www.icfrancavillainsinni.edu.it", "cs": ["Carbone", "Chiaromonte", "Episcopia", "Fardella", "Francavilla in Sinni", "Latronico", "Teana"], "pl": [["Giovanni Rodari - Francavilla", "Scuola Infanzia", "Francavilla in Sinni", "PZAA878022"], ["Latronico Agromonte", "Scuola Primaria", "Latronico", "PZEE87810L"], ["Primaria Chiaromonte", "Scuola Primaria", "Chiaromonte", "PZEE87807C"], ["\"Don Bosco\" I.C. Francavilla", "Scuola Primo Grado", "Francavilla in Sinni", "PZMM878015"], ["Episcopia-Via Ing.G. Bruno", "Scuola Infanzia", "Episcopia", "PZAA87812D"], ["Carbone", "Scuola Primaria", "Carbone", "PZEE87808D"], ["I Grado \"B.Croce\" Latronico", "Scuola Primo Grado", "Latronico", "PZMM878048"], ["Primaria Episcopia", "Scuola Primaria", "Episcopia", "PZEE87811N"], ["Latronico-Fraz.Agr. Magnano", "Scuola Infanzia", "Latronico", "PZAA87811C"], ["Fardella-Via Rinaldi", "Scuola Infanzia", "Fardella", "PZAA878077"], ["Infanzia Teana", "Scuola Infanzia", "Teana", "PZAA878088"], ["I.C. \"Don Bosco\" Francavilla", "Istituto Comprensivo", "Francavilla in Sinni", "PZIC878004"], ["A. Ciancia - Ic Francavilla", "Scuola Primaria", "Francavilla in Sinni", "PZEE878016"], ["Chiaromonte-Via Garibaldi", "Scuola Infanzia", "Chiaromonte", "PZAA878099"], ["Latronico-Via S.Antonio", "Scuola Infanzia", "Latronico", "PZAA87810B"], ["I Grado Episcopia", "Scuola Primo Grado", "Episcopia", "PZMM878059"], ["Primaria - Latronico", "Scuola Primaria", "Latronico", "PZEE87809E"], ["Plesso Dattoli - Francavilla", "Scuola Infanzia", "Francavilla in Sinni", "PZAA878011"], ["I Grado Chiaromonte", "Scuola Primo Grado", "Chiaromonte", "PZMM878037"]]}, {"id": "PZIC87900X", "n": "I.C. \"L. SINISGALLI\" POTENZA", "tp": "Istituto Comprensivo", "ind": "Via Anzio, 85100 Potenza", "em": "pzic87900x@istruzione.it", "pec": "", "w": "www.sinisgallipz.edu.it", "cs": ["Potenza"], "pl": [["Malvaccaro - Ic Sinisgalli Pz", "Scuola Infanzia", "Potenza", "PZAA87902T"], ["I.C. \"L. Sinisgalli\" Potenza", "Istituto Comprensivo", "Potenza", "PZIC87900X"], ["I Grado - \"L.Sinisgalli\" Pz", "Scuola Primo Grado", "Potenza", "PZMM879011"], ["Poggio Tre Galli-Sinisgalli Pz", "Scuola Primaria", "Potenza", "PZEE879012"], ["Piazza Adriatico-Sinisgalli Pz", "Scuola Infanzia", "Potenza", "PZAA87901R"]]}, {"id": "PZIC88300G", "n": "I.C. \"BUSCIOLANO\" POTENZA", "tp": "Istituto Comprensivo", "ind": "Via Sicilia 11, 85100 Potenza", "em": "pzic88300g@istruzione.it", "pec": "", "w": "www.icbusciolano.edu.it", "cs": ["Potenza"], "pl": [["San Nicola-Ic Busciolano Pz", "Scuola Primaria", "Potenza", "PZEE88302P"], ["S. Maria - Ic Busciolano Pz", "Scuola Primaria", "Potenza", "PZEE88303Q"], ["I Grado \"A.Busciolano\" Pz", "Scuola Primo Grado", "Potenza", "PZMM88301L"], ["Sez.Ospedaliera S.Carlo Pz Ic Busciolano", "Scuola Primaria", "Potenza", "PZEE88305T"], ["C.Da Giuliano - Busciolano Pz", "Scuola Infanzia", "Potenza", "PZAA88304G"], ["Via Calabria - Ic Busciolano Pz", "Scuola Infanzia", "Potenza", "PZAA88303E"], ["San Nicola - Ic Busciolano Pz", "Scuola Infanzia", "Potenza", "PZAA88302D"], ["Giuliano-Ic Busciolano Pz", "Scuola Primaria", "Potenza", "PZEE88304R"], ["I.C. \"Busciolano\" Potenza", "Istituto Comprensivo", "Potenza", "PZIC88300G"], ["Avigliano Scalo Busciolano Pz", "Scuola Primaria", "Potenza", "PZEE88301N"], ["Avigliano Scalo - Ic Busciolano", "Scuola Infanzia", "Potenza", "PZAA88301C"]]}, {"id": "PZIC885007", "n": "I.C. \"N. SOLE\" SENISE", "tp": "Istituto Comprensivo", "ind": "Rione S.Pietro, 85038 Senise", "em": "pzic885007@istruzione.it", "pec": "", "w": "www.icnicolasolesenise.edu.it", "cs": ["Castronuovo di Sant'Andrea", "Cersosimo", "Noepoli", "San Costantino Albanese", "Senise", "Terranova di Pollino"], "pl": [["\"S.A.Avellino\" Castronuovo", "Scuola Primo Grado", "Castronuovo di Sant'Andrea", "PZMM88506D"], ["I.C. \"N. Sole\" Senise", "Istituto Comprensivo", "Senise", "PZIC885007"], ["\"N.Sole\" Senise", "Scuola Primo Grado", "Senise", "PZMM885018"], ["Cersosimo- Rione Vignale", "Scuola Infanzia", "Cersosimo", "PZAA885058"], ["Primaria Cersosimo", "Scuola Primaria", "Cersosimo", "PZEE88510Q"], ["Scuola Infanzia Terranova Di P.", "Scuola Infanzia", "Terranova di Pollino", "PZAA885036"], ["I.C. Senise \"S.Pietro\"", "Scuola Primaria", "Senise", "PZEE88503B"], ["Terranova Di Pollino", "Scuola Primaria", "Terranova di Pollino", "PZEE88506E"], ["Senise \"Centrale\"", "Scuola Primaria", "Senise", "PZEE88504C"], ["San Costantino Albanese", "Scuola Primaria", "San Costantino Albanese", "PZEE88508L"], ["I Grado - Cersosimo", "Scuola Primo Grado", "Cersosimo", "PZMM88505C"], ["San Costantino Albanese", "Scuola Primo Grado", "San Costantino Albanese", "PZMM88503A"], ["Senise \"Giardini\"", "Scuola Primaria", "Senise", "PZEE88505D"], ["Noepoli", "Scuola Primaria", "Noepoli", "PZEE88509N"], ["\"A.Rinaldi\" Noepoli", "Scuola Primo Grado", "Noepoli", "PZMM88504B"], ["Noepoli - Via Roma", "Scuola Infanzia", "Noepoli", "PZAA885047"], ["Infanzia \"Belvedere\" - Senise", "Scuola Infanzia", "Senise", "PZAA885025"], ["\"G.Fortunato\" Terranova", "Scuola Primo Grado", "Terranova di Pollino", "PZMM885029"], ["Castronuovo \"Senatro La Cava\"", "Scuola Primaria", "Castronuovo di Sant'Andrea", "PZEE88511R"]]}, {"id": "PZIC886003", "n": "I.C. \"TORRACA-LA VISTA\" POTENZA", "tp": "Istituto Comprensivo", "ind": "Viale Marconi 104/A, 85100 Potenza", "em": "pzic886003@istruzione.it", "pec": "", "w": "www.ictorracabonaventurapz.edu.it", "cs": ["Potenza"], "pl": [["S.G. Bosco - La Vista Pz", "Scuola Primaria", "Potenza", "PZEE886059"], ["Via Iv Novembre - Ic Tor-Bo. Pz", "Scuola Infanzia", "Potenza", "PZAA88601X"], ["Ic \"Torraca - B. - La Vista\" Pz", "Scuola Primo Grado", "Potenza", "PZMM886014"], ["Francioso - La Vista Pz", "Scuola Primaria", "Potenza", "PZEE88606A"], ["Rione Castello - La Vista Pz", "Scuola Infanzia", "Potenza", "PZAA886054"], ["Domiziano Viola-Ic Tor.Bon Pz", "Scuola Primaria", "Potenza", "PZEE886048"], ["18 Agosto-Ic \"Torr.B.La V.\" Pz", "Scuola Primaria", "Potenza", "PZEE886015"], ["I.C. \"Torraca-La Vista\" Potenza", "Istituto Comprensivo", "Potenza", "PZIC886003"], ["Via Delle Acacie-Torraca", "Scuola Infanzia", "Potenza", "PZAA886043"]]}, {"id": "PZIC88800P", "n": "I.C. \"DON MILANI-LEOPARDI\" PZ", "tp": "Istituto Comprensivo", "ind": "Via Tirreno 25, 85100 Potenza", "em": "pzic88800p@istruzione.it", "pec": "", "w": "https//www.donmilanileopardi.edu.it/", "cs": ["Potenza", "Vaglio Basilicata"], "pl": [["Inf. Via Tirreno - Ic Milani Pz", "Scuola Infanzia", "Potenza", "PZAA88805Q"], ["I Grado Vaglio Basilicata", "Scuola Primo Grado", "Vaglio Basilicata", "PZMM88802R"], ["Primaria Albini- Leopardi Pz", "Scuola Primaria", "Potenza", "PZEE888084"], ["Inf. Rossellino - Ic Milani Pz", "Scuola Infanzia", "Potenza", "PZAA88804P"], ["I.C. \"Don Milani-Leopardi\" Pz", "Istituto Comprensivo", "Potenza", "PZIC88800P"], ["Primaria Stigliani-Leopardi Pz", "Scuola Primaria", "Potenza", "PZEE888073"], ["Tullio Trotta-Ic Milani Pz", "Scuola Primaria", "Potenza", "PZEE88804X"], ["Infanzia Vaglio - Ic Milani Pz", "Scuola Infanzia", "Vaglio Basilicata", "PZAA88803N"], ["A. Grippo-Ic Milani Pz", "Scuola Primaria", "Potenza", "PZEE888062"], ["I Grado Ic Milani-Leopardi Pz", "Scuola Primo Grado", "Potenza", "PZMM88801Q"], ["Rione Lucania - Leopardi Pz", "Scuola Infanzia", "Potenza", "PZAA88806R"], ["Vaglio Basilicata", "Scuola Primaria", "Vaglio Basilicata", "PZEE888051"], ["Primaria Rodari- Leopardi Pz", "Scuola Primaria", "Potenza", "PZEE888095"], ["Milani- Ic Don Milani Pz", "Scuola Primaria", "Potenza", "PZEE88802T"], ["Inf. Via Ionio - Ic Milani Pz", "Scuola Infanzia", "Potenza", "PZAA88801G"]]}, {"id": "PZIC88900E", "n": "I.C. CARLO GESUALDO DA VENOSA", "tp": "Istituto Comprensivo", "ind": "Via Appia 36, 85029 Venosa", "em": "pzic88900e@istruzione.it", "pec": "", "w": "www.icvenosa.edu.it", "cs": ["Ginestra", "Venosa"], "pl": [["I.C. Carlo Gesualdo Da Venosa", "Istituto Comprensivo", "Venosa", "PZIC88900E"], ["Infanzia Ginestra", "Scuola Infanzia", "Ginestra", "PZAA88907N"], ["Ginestra \"P.Parisi\"", "Scuola Primaria", "Ginestra", "PZEE88904Q"], ["Venosa-Piazzale De Bernardi", "Scuola Infanzia", "Venosa", "PZAA88904E"], ["Venosa-Via Fornaci", "Scuola Infanzia", "Venosa", "PZAA88905G"], ["Venosa \"Labarile - Ex Via Roma\"", "Scuola Infanzia", "Venosa", "PZAA88903D"], ["Venosa-V.Madonna Della Scala", "Scuola Infanzia", "Venosa", "PZAA88906L"], ["Venosa-Largo Orfanelle", "Scuola Infanzia", "Venosa", "PZAA88902C"], ["I Grado \"De Luca\" I.C. Venosa", "Scuola Primo Grado", "Venosa", "PZMM88901G"], ["Venosa \"Giovanni Xxiii\"", "Scuola Primaria", "Venosa", "PZEE88903P"]]}, {"id": "PZIC89200A", "n": "I.C. LAVELLO", "tp": "Istituto Comprensivo", "ind": "Piazza Matteotti 21, 85024 Lavello", "em": "pzic89200a@istruzione.it", "pec": "", "w": "www.iclavello.edu.it", "cs": ["Lavello"], "pl": [["I Grado - I.C. Lavello", "Scuola Primo Grado", "Lavello", "PZMM89201B"], ["S.P. \"Matteotti\" - Ic Lavello", "Scuola Primaria", "Lavello", "PZEE89201C"], ["Via Arno - Ic Lavello", "Scuola Infanzia", "Lavello", "PZAA892039"], ["C.Da Pupoli Lavello", "Scuola Infanzia", "Lavello", "PZAA89204A"], ["Rione Madonnina - Ic Lavello", "Scuola Infanzia", "Lavello", "PZAA892028"], ["Rione Madonnina-Ic Lavello", "Scuola Primaria", "Lavello", "PZEE89203E"], ["Primaria Sant'Anna-Ic Lavello", "Scuola Primaria", "Lavello", "PZEE89202D"], ["I.C. Lavello", "Istituto Comprensivo", "Lavello", "PZIC89200A"], ["S. Infanzia - Ic Lavello", "Scuola Infanzia", "Lavello", "PZAA892017"]]}, {"id": "PZIC894002", "n": "I.C.\"GRANATA\"RIONERO-ATELLA", "tp": "Istituto Comprensivo", "ind": "Via Maria Catenacci Rubino 15, 85028 Rionero In Vulture", "em": "pzic894002@istruzione.it", "pec": "", "w": "www.icgranata.edu.it", "cs": ["Atella", "Rionero in Vulture"], "pl": [["Scuola Materna Atella", "Scuola Infanzia", "Atella", "PZAA89402X"], ["Primaria - Atella", "Scuola Primaria", "Atella", "PZEE894025"], ["I.C.\"Granata\"Rionero-Atella", "Istituto Comprensivo", "Rionero in Vulture", "PZIC894002"], ["I Grado \"Nitti\" - Atella", "Scuola Primo Grado", "Atella", "PZMM894024"], ["Primaria - Ic Granata Rionero", "Scuola Primaria", "Rionero in Vulture", "PZEE894014"], ["Infanzia - Ic Granata Rionero", "Scuola Infanzia", "Rionero in Vulture", "PZAA89401V"], ["I Grado - \"M.Granata\" Rionero", "Scuola Primo Grado", "Rionero in Vulture", "PZMM894013"]]}, {"id": "PZIC89500T", "n": "IC EX CD RIONERO-S.FE.-RUV-RAP", "tp": "Istituto Comprensivo", "ind": "Via San Pio 1- Presso Centro Sociale, 85028 Rionero In Vulture", "em": "pzic89500t@istruzione.it", "pec": "", "w": "www.icrionero.edu.it", "cs": ["Rionero in Vulture"], "pl": [["Giovanni Xiii - Rapone", "Scuola Primaria", "Rapone", "PZEE895054"], ["Ic Ex Cd Rionero-S.Fe.-Ruv-Rap", "Istituto Comprensivo", "Rionero in Vulture", "PZIC89500T"], ["Inf. Via Galliano-Ex Cd Rionero", "Scuola Infanzia", "Rionero in Vulture", "PZAA89501P"], ["S.Fele \"S.Giustino De Jacobis\"", "Scuola Primaria", "San Fele", "PZEE895032"], ["Ruvo Del Monte", "Scuola Primaria", "Ruvo del Monte", "PZEE895043"], ["Ruvo Del Monte-S.Anna", "Scuola Infanzia", "Ruvo del Monte", "PZAA89504T"], ["Primaria T.M. Preziuso", "Scuola Primaria", "Rionero in Vulture", "PZEE89501X"], ["Primaria T.P. Preziuso", "Scuola Primaria", "Rionero in Vulture", "PZEE895021"], ["I Grado - I.C. Ex Cd Rionero", "Scuola Primo Grado", "Rionero in Vulture", "PZMM89501V"], ["Rapone", "Scuola Primo Grado", "Rapone", "PZMM895042"], ["Infanzia Rapone", "Scuola Infanzia", "Rapone", "PZAA89505V"], ["Ruvo Del Monte", "Scuola Primo Grado", "Ruvo del Monte", "PZMM895031"], ["\"G.Faggella\" San Fele", "Scuola Primo Grado", "San Fele", "PZMM89502X"], ["San Fele \"Montessori\"", "Scuola Infanzia", "San Fele", "PZAA89503R"], ["Inf. Zona Gaudo-Ex Cd Rionero", "Scuola Infanzia", "Rionero in Vulture", "PZAA89502Q"]]}, {"id": "PZIC89600N", "n": "I.C. \"D. SAVIO\" POTENZA", "tp": "Istituto Comprensivo", "ind": "Via Di Giura - Rione Risorgimento, 85100 Potenza", "em": "pzic89600n@istruzione.it", "pec": "", "w": "https//www.icdomenicosaviopz.edu.it/", "cs": ["Potenza"], "pl": [["Via Domenico Savio-Ic Savio Pz", "Scuola Infanzia", "Potenza", "PZAA89601E"], ["I.C. \"D. Savio\" Potenza", "Istituto Comprensivo", "Potenza", "PZIC89600N"], ["I Grado - \"D. Savio\" Pz", "Scuola Primo Grado", "Potenza", "PZMM89601P"], ["Mercurio - Ic D. Savio Potenza", "Scuola Primaria", "Potenza", "PZEE89601Q"]]}, {"id": "PZIS001007", "n": "I.I.S.\"DE SARLO-DE LORENZO\" LAGONEGRO", "tp": "Istituto Superiore", "ind": "Via S. Antuono 192, 85042 Lagonegro", "em": "pzis001007@istruzione.it", "pec": "", "w": "www.desarlolagonegro.edu.it", "cs": ["Latronico"], "pl": [["Liceo S.U. \"F. De Sarlo\" Lagonegro", "Istituto Magistrale", "Lagonegro", "PZPM00101P"], ["I.P. Corso Serale \"Fortunato\" Lagonegro", "Ist Prof Per L'Agricoltura E L'Ambiente", "Lagonegro", "PZRA00150G"], ["I.P.S.A.S.R. \"G. Fortunato\" Lagonegro", "Ist Prof Per L'Agricoltura E L'Ambiente", "Lagonegro", "PZRA001017"], ["I.T. \"V. D'Alessandro\" Lagonegro", "Ist Tec Commerciale E Per Geometri", "Lagonegro", "PZTD00101D"], ["L.S. \"De Lorenzo\" Latronico", "Liceo Scientifico", "Latronico", "PZPS00102P"], ["I.I.S.\"De Sarlo-De Lorenzo\" Lagonegro", "Istituto Superiore", "Lagonegro", "PZIS001007"], ["L.S. \"De Lorenzo\" Lagonegro", "Liceo Scientifico", "Lagonegro", "PZPS00101N"]]}, {"id": "PZIS002003", "n": "I.I.S. \"G. FORTUNATO\" RIONERO IN V.", "tp": "Istituto Superiore", "ind": "S. S. 167 Via Monticchio Campus, 85028 Rionero In Vulture", "em": "pzis002003@istruzione.it", "pec": "", "w": "liceirionero.edu.it", "cs": ["Rionero in Vulture"], "pl": [["Liceo Art. \"G. Fortunato\"", "Istituto D'Arte", "Rionero in Vulture", "PZSD00201X"], ["L.S. \"G. Fortunato\" Rionero In V.", "Liceo Scientifico", "Rionero in Vulture", "PZPS00201D"], ["I.I.S. \"G. Fortunato\" Rionero In V.", "Istituto Superiore", "Rionero in Vulture", "PZIS002003"], ["I.T. \"G. Fortunato\" Rionero In V.", "Istituto Tecnico Industriale", "Rionero in Vulture", "PZTF00201G"], ["L.S.U. \"G. Fortunato\" Rionero In V.", "Istituto Magistrale", "Rionero in Vulture", "PZPM00201E"], ["L.C. \"G. Fortunato\"", "Liceo Classico", "Rionero in Vulture", "PZPC00202B"]]}, {"id": "PZIS00600A", "n": "I.I.S. \"N.MIRAGLIA\" LAURIA", "tp": "Istituto Superiore", "ind": "Via Cerse Dello Speziale, 85045 Lauria", "em": "pzis00600a@istruzione.it", "pec": "", "w": "www.iismiraglialauria.edu.it", "cs": ["Rotonda", "Viggianello"], "pl": [["I.T.T. Corso Serale \"Miraglia\" Lauria", "Istituto Tecnico Industriale", "Lauria", "PZTF006507"], ["Liceo Scientifico Rotonda", "Liceo Scientifico", "Rotonda", "PZPS00601R"], ["Corso Serale I.T. Viggianello", "Istituto Tecnico Commerciale", "Viggianello", "PZTD006523"], ["L.C. \"N. Carlomagno\" Lauria", "Liceo Classico", "Lauria", "PZPC00601N"], ["I.T.T. \"E. Ferrari\" Lauria", "Istituto Tecnico Industriale", "Lauria", "PZTF00601V"], ["I.T.E. - Viggianello", "Istituto Tecnico Commerciale", "Viggianello", "PZTD00602N"], ["I.P. Serv. \"Ruggero\" Lauria", "Ist Prof Per I Servizi Commerciali", "Lauria", "PZRC00602A"], ["I.I.S. \"N.Miraglia\" Lauria", "Istituto Superiore", "Lauria", "PZIS00600A"], ["I.P. Art. \"Ruggero Di Lauria\"", "Ist Prof Industria E Artigianato", "Lauria", "PZRI006034"]]}, {"id": "PZIS01100T", "n": "I.I.S. \"G. SOLIMENE\" LAVELLO", "tp": "Istituto Superiore", "ind": "Via Aldo Moro N. 1, 85024 Lavello", "em": "pzis01100t@istruzione.it", "pec": "", "w": "", "cs": ["Lavello", "Palazzo San Gervasio"], "pl": [["I.T.E. Corso Serale Lavello", "Istituto Tecnico Commerciale", "Lavello", "PZTD01150C"], ["Liceo Palazzo San G.", "Istituto Magistrale", "Palazzo San Gervasio", "PZPM011019"], ["I.T.E. \"C. D'Errico\" Palazzo San G.", "Ist Tec Commerciale E Per Geometri", "Palazzo San Gervasio", "PZTD011025"], ["Liceo Giuseppe Solimene Lavello", "Liceo Classico", "Lavello", "PZPC011015"], ["I.T.E. \"Solimene\" Lavello", "Istituto Tecnico Commerciale", "Lavello", "PZTD011014"], ["I.I.S. \"G. Solimene\" Lavello", "Istituto Superiore", "Lavello", "PZIS01100T"], ["I.T.E. Corso Serale Palazzo S.G.", "Istituto Tecnico Commerciale", "Palazzo San Gervasio", "PZTD01152E"], ["I.T.T. \"Solimene\" Lavello", "Istituto Tecnico Agrario", "Lavello", "PZTA01101N"]]}, {"id": "PZIS01700R", "n": "I.I.S. \"CARLO LEVI\" SANT'ARCANGELO", "tp": "Istituto Superiore", "ind": "Viale Italia 34, 85037 Sant'Arcangelo", "em": "pzis01700r@istruzione.it", "pec": "", "w": "www.isisantarcangelo.edu.it", "cs": ["Sant'Arcangelo"], "pl": [["Liceo Di Sant'Arcangelo", "Liceo Scientifico", "Sant'Arcangelo", "PZPS017017"], ["I.T.E. \"Sinisgalli\" Sant'Arcangelo", "Ist Tec Commerciale E Per Geometri", "Sant'Arcangelo", "PZTD017013"], ["I.P. \"Fortunato\" Sant'Arcangelo", "Ist Prof Per L'Agricoltura E L'Ambiente", "Sant'Arcangelo", "PZRA01701R"], ["I.P. Corso Serale Fortunato-S.Arcangelo", "Ist Prof Per L'Agricoltura E L'Ambiente", "Sant'Arcangelo", "PZRA017516"], ["Itt \"16 Ago.1860\" Corleto Perticara", "Istituto Tecnico Industriale", "Corleto Perticara", "PZTF017019"], ["I.I.S. \"Carlo Levi\" Sant'Arcangelo", "Istituto Superiore", "Sant'Arcangelo", "PZIS01700R"], ["I.T.E. Corso Serale Sant'Arcangelo", "Istituto Tecnico Commerciale", "Sant'Arcangelo", "PZTD01750B"]]}, {"id": "PZIS01800L", "n": "I.I.S. \"L. SINISGALLI\" SENISE", "tp": "Istituto Superiore", "ind": "Contrada Rotalupo, 85038 Senise", "em": "pzis01800l@istruzione.it", "pec": "", "w": "www.istsinisgalli.edu.it", "cs": ["Senise"], "pl": [["I.T. Corso Serale \"Sinisgalli\" Senise", "Ist Tec Commerciale E Per Geometri", "Senise", "PZTD018507"], ["I.T. \"Leonardo Sinisgalli\" Senise", "Ist Tec Commerciale E Per Geometri", "Senise", "PZTD01801V"], ["I.I.S. \"L. Sinisgalli\" Senise", "Istituto Superiore", "Senise", "PZIS01800L"], ["L.C. \"Isabella Morra\" Senise", "Liceo Classico", "Senise", "PZPC01801X"]]}, {"id": "PZIS02100C", "n": "I.I.S. \"FLACCO-BATTAGLINI\" VENOSA", "tp": "Istituto Superiore", "ind": "Via Emilia N? 32, 85029 Venosa", "em": "pzis02100c@istruzione.it", "pec": "", "w": "www.liceovenosa.edu.it", "cs": ["Venosa"], "pl": [["I.P.S.C. \"Battaglini\" Venosa", "Ist Prof Per I Servizi Commerciali", "Venosa", "PZRC02102C"], ["I.I.S. \"Flacco-Battaglini\" Venosa", "Istituto Superiore", "Venosa", "PZIS02100C"], ["I.P.S.I.A. - Venosa", "Ist Prof Industria E Artigianato", "Venosa", "PZRI021014"], ["I.T. \"Battaglini\" Venosa", "Ist Tec Commerciale E Per Geometri", "Venosa", "PZTD02101P"], ["Liceo \"Q. O. Flacco\" - Venosa", "Liceo Classico", "Venosa", "PZPC02102R"], ["I.P. Corso Serale \"Battaglini\" Venosa", "Ist Prof Per I Servizi Commerciali", "Venosa", "PZRC02152T"]]}, {"id": "PZIS022008", "n": "I.I.S. \"EINSTEIN - DE LORENZO\" POTENZA", "tp": "Istituto Superiore", "ind": "Via Sicilia 4, 85100 Potenza", "em": "pzis022008@istruzione.it", "pec": "", "w": "www.itigeopz.gov.it", "cs": ["Picerno", "Potenza"], "pl": [["I.T.T. \"Einst.-De Lor.\"Sez.Itg Potenza", "Istituto Tecnico Per Geometri", "Potenza", "PZTL022011"], ["I.T.T. \"Einst-De Lor\"Sez. Serale Potenza", "Istituto Tecnico Per Geometri", "Potenza", "PZTL02251A"], ["I.I.S. \"Einstein - De Lorenzo\" Potenza", "Istituto Superiore", "Potenza", "PZIS022008"], ["I.T.T. \"Einstein\" Picerno", "Istituto Tecnico Industriale", "Picerno", "PZTF02203V"], ["I.T.T. \"Einst.-De Lor.\" Sez.Itis Potenza", "Istituto Tecnico Industriale", "Potenza", "PZTF02202T"]]}, {"id": "PZIS02400X", "n": "I.I.S. \"DA VINCI-NITTI\" POTENZA", "tp": "Istituto Superiore", "ind": "Via Ancona Snc, 85100 Potenza", "em": "pzis02400x@istruzione.it", "pec": "", "w": "www.davinci-nitti.edu.it", "cs": ["Potenza"], "pl": [["I.T.E. \"L. Da Vinci\" Potenza", "Istituto Tecnico Commerciale", "Potenza", "PZTD024038"], ["Casa Circondariale Minorile Pz", "Ist Prof Per I Servizi Commerciali E Turistici", "Potenza", "PZRC02402X"], ["L. Linguistico \"L. Da Vinci\" Potenza", "Liceo Scientifico", "Potenza", "PZPS02401A"], ["I.I.S. \"Da Vinci-Nitti\" Potenza", "Istituto Superiore", "Potenza", "PZIS02400X"], ["I.T.E. \"Antonio Falce\" Brienza", "Istituto Tecnico Commerciale", "Brienza", "PZTD024027"]]}, {"id": "PZIS029003", "n": "I.O. \"E. MAJORANA\" GENZANO DI LUCANIA", "tp": "Istituto Superiore", "ind": "Via Generale Pennella Snc, 85013 Genzano Di Lucania", "em": "pzis029003@istruzione.it", "pec": "", "w": "www.majorangenzano.edu.it", "cs": ["Genzano di Lucania"], "pl": [["I.P.S.A.S.R. \"G.Fortunato\" Genzano Di L.", "Ist Prof Per L'Agricoltura E L'Ambiente", "Genzano di Lucania", "PZRA029013"], ["Liceo \"Majorana\" Genzano Di Lucania", "Liceo Scientifico", "Genzano di Lucania", "PZPS02901D"], ["Corso Serale I.P.S.A.S.R. Genzano", "Ist Prof Per L'Agricoltura", "Genzano di Lucania", "PZRA02950B"], ["I.O. \"E. Majorana\" Genzano Di Lucania", "Istituto Superiore", "Genzano di Lucania", "PZIS029003"]]}, {"id": "PZIS03200V", "n": "I.I.S. \"DI PASCA - FORTUNATO\" POTENZA", "tp": "Istituto Superiore", "ind": "Via Anzio N 4, 85100 Potenza", "em": "pzis03200v@istruzione.it", "pec": "", "w": "", "cs": ["Avigliano", "Potenza"], "pl": [["I.P. \"Di Pasca\" - Sezione Carceraria Pz", "Ist Prof Per I Servizi Alberghieri E Ristorazione", "Potenza", "PZRH032013"], ["I.P.S.A.S.R. \"G. Fortunato\" Potenza", "Ist Prof Per L'Agricoltura E L'Ambiente", "Potenza", "PZRA03202X"], ["I.I.S. \"Di Pasca - Fortunato\" Potenza", "Istituto Superiore", "Potenza", "PZIS03200V"], ["I.P.S.E.O.A. \"Di Pasca\" Corso Serale Pz", "Ist Prof Per I Servizi Alberghieri E Ristorazione", "Potenza", "PZRH03252D"], ["I.P.S.A.S.R. \"G. Fortunato\" Lagopesole", "Ist Prof Per L'Agricoltura E L'Ambiente", "Avigliano", "PZRA03201V"], ["I.P. Corso Serale \"Fortunato\" Lagopesole", "Ist Prof Per L'Agricoltura E L'Ambiente", "Avigliano", "PZRA032518"], ["I.P.S.E.O.A. \"U. Di Pasca\" Potenza", "Ist Prof Per I Servizi Alberghieri E Ristorazione", "Potenza", "PZRH032024"], ["I.P. Corso Serale \"Fortunato\" Potenza", "Ist Prof Per L'Agricoltura E L'Ambiente", "Potenza", "PZRA032529"]]}, {"id": "PZMM200002", "n": "C.P.I.A. POTENZA", "tp": "Scuola Primo Grado", "ind": "Via P.Lacava 2, 85100 Potenza", "em": "pzmm200002@istruzione.it", "pec": "", "w": "https//www.cpiapotenza.edu.it", "cs": ["Lavello", "Potenza", "Rionero in Vulture", "Sant'Arcangelo", "Senise"], "pl": [["Cpia Pz-Sede Associata Brienza", "Centro Territoriale", "Satriano Di Lucania", "PZCT713006"], ["Cpia Pz-Sede Associata Corleto Perticara", "Centro Territoriale", "Sant'Arcangelo", "PZCT714002"], ["Cpia Pz-Sede Associata Potenza", "Centro Territoriale", "Potenza", "PZCT70800P"], ["Sede Carceraria Primo Grado Melfi", "Scuola Primo Grado", "Melfi", "PZMM701017"], ["Cpia Pz-Sede Associata Lagonegro", "Centro Territoriale", "Lagonegro", "PZCT71000P"], ["Cpia Pz-Sede Associata Rionero", "Centro Territoriale", "Rionero in Vulture", "PZCT70100X"], ["C.P.I.A. Potenza", "Scuola Primo Grado", "Potenza", "PZMM200002"], ["Sede Carceraria Primaria Melfi", "Scuola Primaria", "Melfi", "PZEE70103A"], ["Sede Carceraria Potenza", "Scuola Primo Grado", "Potenza", "PZMM708012"], ["Cpia Pz-Sede Associata Lavello", "Centro Territoriale", "Lavello", "PZCT71200A"], ["Cpia Pz-Sede Associata Senise", "Centro Territoriale", "Senise", "PZCT71100E"], ["Sede Carceraria Potenza", "Scuola Primaria", "Potenza", "PZEE708013"]]}, {"id": "PZPC040004", "n": "L.C. \"Q. ORAZIO FLACCO\" POTENZA", "tp": "Liceo Classico", "ind": "Via Vaccaro36/B, 85100 Potenza", "em": "pzpc040004@istruzione.it", "pec": "", "w": "https//www.liceoclassicostatalepz.edu.it/", "cs": ["Potenza"], "pl": [["L.C. \"Q. Orazio Flacco\" Potenza", "Liceo Classico", "Potenza", "PZPC040004"]]}, {"id": "PZPS040007", "n": "L.S. \"G. GALILEI\" POTENZA", "tp": "Liceo Scientifico", "ind": "Via Anzio N. 2, 85100 Potenza", "em": "pzps040007@istruzione.it", "pec": "", "w": "www.liceogalileipz.edu.it", "cs": ["Potenza"], "pl": [["L.S. \"G. Galilei\" Potenza", "Liceo Scientifico", "Potenza", "PZPS040007"]]}, {"id": "PZPS08000N", "n": "LICEO \"ROSA-GIANTURCO\" CONVITTO NAZ. PZ", "tp": "Liceo Scientifico", "ind": "Via Anzio N.6, 85100 Potenza", "em": "pzps08000n@istruzione.it", "pec": "", "w": "www.convittoliceoannessopz.edu.it", "cs": ["Potenza"], "pl": [["Liceo \"Rosa-Gianturco\" Convitto Naz. Pz", "Liceo Scientifico", "Potenza", "PZPS08000N"]]}, {"id": "PZPS12000V", "n": "L.S. \"PASOLINI\" POTENZA", "tp": "Liceo Scientifico", "ind": "Via Anzio Snc, 85100 Potenza", "em": "pzps12000v@istruzione.it", "pec": "", "w": "https//www.liceoscientificopasolinipz.edu.it/", "cs": ["Potenza"], "pl": [["L.S. \"Pasolini\" Potenza", "Liceo Scientifico", "Potenza", "PZPS12000V"], ["L.S. Laurenzana - Pasolini Pz", "Liceo Scientifico", "Laurenzana", "PZPS12001X"], ["L.S. \"E.Fermi\" Muro Lucano - Pasolini Pz", "Liceo Scientifico", "Muro Lucano", "PZPS120021"]]}, {"id": "PZRI04000C", "n": "I.P.S.I.A. \"GIORGI\" POTENZA", "tp": "Ist Prof Industria E Artigianato", "ind": "Via Pola, 85100 Potenza", "em": "pzri04000c@istruzione.it", "pec": "", "w": "www.ipsiapotenza.edu.it", "cs": ["Potenza"], "pl": [["I.P. Corso Serale \"Giorgi\" Pz", "Ist Prof Industria E Artigianato", "Potenza", "PZRI04052X"], ["I.P.S.I.A. \"Giorgi\" Potenza", "Ist Prof Industria E Artigianato", "Potenza", "PZRI04000C"]]}, {"id": "PZSD030003", "n": "LICEO ART. MUS. COR. \"GROPIUS\" POTENZA", "tp": "Istituto D'Arte", "ind": "Via Anzio 4, 85100 Potenza", "em": "pzsd030003@istruzione.it", "pec": "", "w": "www.liceoartisticoemusicale.edu.it", "cs": ["Potenza"], "pl": [["Liceo Art. Mus. Cor. \"Gropius\" Potenza", "Istituto D'Arte", "Potenza", "PZSD030003"]]}, {"id": "PZVC01000G", "n": "CONVITTO NAZIONALE \"S.ROSA\" - POTENZA", "tp": "Convitto Nazionale", "ind": "Via Anzio N. 6, 85100 Potenza", "em": "pzvc01000g@istruzione.it", "pec": "", "w": "www.convittoliceoannessopz.edu.it", "cs": ["Potenza"], "pl": [["Convitto Nazionale \"S.Rosa\" - Potenza", "Convitto Nazionale", "Potenza", "PZVC01000G"]]}, {"id": "PZVC03000R", "n": "CONVITTO ALBERGHIERO DI PASCA - POTENZA", "tp": "Convitto Annesso", "ind": "Via Anzio 4, 85100 Potenza", "em": "pzvc03000r@istruzione.it", "pec": "", "w": "", "cs": ["Potenza"], "pl": [["Convitto Alberghiero Di Pasca - Potenza", "Convitto Annesso", "Potenza", "PZVC03000R"]]}, {"id": "PZVC04000B", "n": "I.P.S.A.S.R. \"G. FORTUNATO\" - LAGOPESOLE", "tp": "Convitto Annesso", "ind": "Via F.Torraca13 - 85100- Potenza, 85020 Avigliano", "em": "pzvc04000b@istruzione.it", "pec": "", "w": "", "cs": ["Avigliano"], "pl": [["I.P.S.A.S.R. \"G. Fortunato\" - Lagopesole", "Convitto Annesso", "Avigliano", "PZVC04000B"]]}, {"id": "PZVC050002", "n": "I.P. G.FORTUNATO - SANT'ARCANGELO", "tp": "Convitto Annesso", "ind": "Non Disponibile, 85037 Sant'Arcangelo", "em": "pzvc050002@istruzione.it", "pec": "", "w": "", "cs": ["Sant'Arcangelo"], "pl": [["I.P. G.Fortunato - Sant'Arcangelo", "Convitto Annesso", "Sant'Arcangelo", "PZVC050002"]]}, {"id": "PZTDOV5000", "n": "BENEDETTO CROCE", "tp": "Scuola Sec. Secondo Grado Non Statale", "ind": "Via Chiesa 10, 85043 Latronico", "em": "scuolabenedettocroce@gmail.com", "pec": "iervolinom@pec.it", "w": "", "cs": ["Latronico"], "pl": [], "par": 1}];
+const K = 3000, LAT0 = 40.75, LON0 = 15.54;
+const proj = ([la,lo]) => [(lo-LON0)*K, -(la-LAT0)*K*1.32];
+const MP = AREE.find(a=>a.id==="mp");
+const areaNodeId = a => a.id==="mp" ? "H:AREA" : "AR:"+a.id;
+
+// ---------- build graph ----------
+const nodes = [], links = [], byId = new Map();
+function add(n){ nodes.push(n); byId.set(n.id,n); return n; }
+const CDATA = new Map(DATA.C.map(c=>[c.n,c]));
+AREE.forEach(a => a.cs.forEach(c => { const [x,y] = proj(GEO[c]); add({id:"C:"+c, kind:"comune", name:c, data:CDATA.get(c)||{n:c}, area:a, fx:x, fy:y, r: a.id==="mp"?7:4.6}); }));
+AREE.forEach(a => {
+  const pts = a.cs.map(c=>byId.get("C:"+c)), pad = [];
+  pts.forEach(p => { for (let i=0;i<14;i++){ const t=i/14*Math.PI*2; pad.push([p.fx+Math.cos(t)*46, p.fy+Math.sin(t)*46]); } });
+  a.hull = d3.polygonHull(pad);
+  a.cx = d3.mean(pts,p=>p.fx); a.cy = d3.mean(pts,p=>p.fy);
+  const top = d3.min(a.hull, p=>p[1]);
+  add({id:areaNodeId(a), kind:"area", name:a.n, area:a, sub: a.t==="urbana"?"Area urbana":"Area interna SNAI", fx:a.cx, fy: top-14, r:4});
+  a.cs.forEach(c => links.push({source:areaNodeId(a), target:"C:"+c, kind:"area"}));
+});
+const [px,py] = proj(GEO["Potenza"]);
+add({id:"H:REG", kind:"hub", name:"Regione Basilicata", sub:"Enti regionali e provinciali · Potenza", fx:px+170, fy:py+90, r:6});
+add({id:"H:NAZ", kind:"hub", name:"Roma · Bruxelles", sub:"Livello nazionale ed europeo", fx:-640, fy:-560, r:6});
+AREE.forEach(a => links.push({source:"H:REG", target:areaNodeId(a), kind:"frame"}));
+links.push({source:"H:REG", target:"H:NAZ", kind:"frame"});
+
+DATA.O.forEach(o => { const c = byId.get("C:"+o.com); add({id:"O:"+o.n, kind:"opera", name:o.t, data:o, x:c.fx+(Math.random()-.5)*40, y:c.fy+(Math.random()-.5)*40, r: 2.5 + Math.sqrt(o.e/100000)*1.1});
+  links.push({source:"C:"+o.com, target:"O:"+o.n, kind:"opera"}); });
+
+DATA.S.forEach(s => {
+  const n = add({id:"S:"+s.id, kind:"stake", name:s.n, data:s, cat:s.c, r: s.r==="Alta"?4.6: s.r==="Media"?3.4:2.6});
+  const anchors = s.cs.length ? s.cs.map(c=>"C:"+c) : [s.lv==="NAZ"?"H:NAZ": s.lv==="AREA"?"H:AREA":"H:REG"];
+  anchors.forEach(a => links.push({source:a, target:n.id, kind:"home"}));
+  s.o.forEach(k => links.push({source:n.id, target:"O:"+k, kind:"works"}));
+  const a0 = byId.get(anchors[0]); n.x = a0.fx + (Math.random()-.5)*60; n.y = a0.fy + (Math.random()-.5)*60;
+});
+// scuole statali e paritarie (MIM 2026/27) dei comuni delle altre aree
+SCU.forEach(s => { const n = add({id:"I:"+s.id, kind:"scuola", name:s.n, data:s, cat:5, r:3});
+  s.cs.forEach(c => links.push({source:"C:"+c, target:n.id, kind:"home"}));
+  const a0 = byId.get("C:"+s.cs[0]); n.x = a0.fx + (Math.random()-.5)*40; n.y = a0.fy + (Math.random()-.5)*40; });
+DATA.U.forEach((u,i) => { const n = add({id:"U:"+i, kind:"uni", name:u.n, data:u, cat:13, r:3.4});
+  const home = /^Matera/.test(u.sd) ? "C:Matera" : /^Potenza/.test(u.sd) ? "C:Potenza" : "H:REG";
+  links.push({source:home, target:n.id, kind:"home"}); const h=byId.get(home); n.x=h.fx+(Math.random()-.5)*50; n.y=h.fy+(Math.random()-.5)*50; });
+
+// adjacency
+const adj = new Map(nodes.map(n=>[n.id,new Set()]));
+links.forEach(l => { adj.get(l.source).add(l.target); adj.get(l.target).add(l.source); });
+
+// ---------- state ----------
+const state = { cats:new Set(Object.keys(CAT).map(Number)), rel:new Set(["Alta","Media","Bassa"]), opere:true, uni:true, scuole:true, onlyVer:false, sel:null, hover:null, area:null };
+function visible(n){
+  if (n.hidden) return false;
+  if (n.kind==="comune"||n.kind==="hub"||n.kind==="area") return true;
+  if (n.kind==="scuola") return state.scuole && state.cats.has(5);
+  if (n.kind==="opera") return state.opere;
+  if (n.kind==="uni") return state.uni && state.cats.has(13);
+  const s = n.data;
+  if (!state.cats.has(n.cat)) return false;
+  if (!state.rel.has(s.r)) return false;
+  if (state.onlyVer && s.v!=="Da verificare") return false;
+  return true;
+}
+
+// ---------- simulation ----------
+const sim = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d=>d.id)
+     .distance(l => l.kind==="frame"||l.kind==="area"?1: l.kind==="opera"?26: l.kind==="works"?40: (l.source.kind==="hub"?85:58))
+     .strength(l => l.kind==="frame"||l.kind==="area"?0: l.kind==="works"?0.05: l.kind==="opera"?0.9: 0.5))
+  .force("charge", d3.forceManyBody().strength(d => d.kind==="stake"||d.kind==="uni"||d.kind==="scuola"? -26 : -10).distanceMax(220))
+  .force("collide", d3.forceCollide(d => d.r + 6))
+  .alphaDecay(0.03);
+
+// ---------- canvas ----------
+const canvas = document.getElementById("sky"), ctx = canvas.getContext("2d");
+let W=0,H=0,DPR=1, transform = d3.zoomIdentity;
+const stars = Array.from({length:260},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.1+.2,a:Math.random()*.5+.15}));
+function resize(){ DPR = Math.min(window.devicePixelRatio||1,2); W = canvas.clientWidth; H = canvas.clientHeight; canvas.width=W*DPR; canvas.height=H*DPR; draw(); }
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function colorOf(n){ return n.kind==="opera"? OPERA_C : (n.kind==="comune"||n.kind==="area")? n.area.col : n.kind==="hub"? "#cfd9ec" : CAT[n.cat].c; }
+function selArea(){ const f = state.sel; return f && f.kind==="area" ? f.area : f && f.kind==="comune" ? f.area : state.area; }
+
+function focusSet(){
+  const f = state.hover || state.sel; if (!f || !adj.has(f.id)) return null;
+  const s = new Set([f.id]); adj.get(f.id).forEach(x=>s.add(x));
+  if (f.kind==="area") f.area.cs.forEach(c => adj.get("C:"+c).forEach(x=>s.add(x)));
+  return s;
+}
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle = css("--sky"); ctx.fillRect(0,0,W,H);
+  const g = ctx.createRadialGradient(W*.55,H*.45,0,W*.55,H*.45,Math.max(W,H)*.7);
+  g.addColorStop(0,"rgba(40,60,110,.28)"); g.addColorStop(1,"rgba(0,0,0,0)"); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  stars.forEach(s=>{ ctx.globalAlpha=s.a; ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r, 0, 7); ctx.fill(); });
+  ctx.globalAlpha=1;
+  ctx.save(); ctx.translate(transform.x, transform.y); ctx.scale(transform.k, transform.k);
+  const k = transform.k;
+  // graticule: real lat/lon lines every 0.1°
+  ctx.lineWidth = 1/k; ctx.strokeStyle="rgba(150,175,215,.06)"; ctx.fillStyle="rgba(150,175,215,.3)"; ctx.font = `${10/k}px "IBM Plex Mono", monospace`;
+  const [gx0,gy0] = proj([41.25,15.2]), [gx1,gy1] = proj([39.85,16.95]);
+  for (let la=39.9; la<=41.21; la+=0.1){ const y = proj([la,0])[1]; ctx.beginPath(); ctx.moveTo(gx0,y); ctx.lineTo(gx1,y); ctx.stroke(); ctx.fillText(la.toFixed(1)+"°N", gx0+4/k, y-3/k); }
+  for (let lo=15.2; lo<=16.951; lo+=0.1){ const x = proj([0,lo])[0]; ctx.beginPath(); ctx.moveTo(x,gy0); ctx.lineTo(x,gy1); ctx.stroke(); ctx.fillText(lo.toFixed(1)+"°E", x+3/k, gy0+12/k); }
+  // area hulls
+  const sa = selArea();
+  AREE.forEach(a => {
+    const on = sa===a;
+    ctx.beginPath(); a.hull.forEach((p,i)=> i? ctx.lineTo(p[0],p[1]) : ctx.moveTo(p[0],p[1])); ctx.closePath();
+    ctx.globalAlpha = on? .16 : sa? .04 : .08; ctx.fillStyle = a.col; ctx.fill();
+    ctx.globalAlpha = on? .9 : sa? .2 : .45; ctx.strokeStyle = a.col; ctx.lineWidth = (on?1.8:1.1)/k;
+    ctx.setLineDash(a.t==="urbana"? [6/k,5/k] : []); ctx.stroke(); ctx.setLineDash([]);
+  });
+  ctx.globalAlpha = 1;
+  const fs = focusSet();
+  // links
+  links.forEach(l => {
+    const a=l.source,b=l.target; if (l.kind==="area" || !visible(a)||!visible(b)) return;
+    const on = fs && fs.has(a.id) && fs.has(b.id) && (a===(state.hover||state.sel) || b===(state.hover||state.sel));
+    if (l.kind==="frame"){ ctx.strokeStyle = "rgba(242,200,121,.18)"; ctx.setLineDash([4/k,6/k]); }
+    else { ctx.setLineDash([]); ctx.strokeStyle = on? "rgba(242,200,121,.75)" : fs? "rgba(150,175,215,.04)" : l.kind==="works"? "rgba(255,255,255,.07)" : "rgba(150,175,215,.13)"; }
+    ctx.lineWidth = (on?1.4:0.8)/k; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  });
+  ctx.setLineDash([]);
+  // nodes
+  nodes.forEach(n => {
+    if (!visible(n)) return;
+    const dim = fs && !fs.has(n.id);
+    ctx.globalAlpha = dim? .16 : 1;
+    const c = colorOf(n);
+    if (n.kind==="opera"){
+      ctx.save(); ctx.translate(n.x,n.y); ctx.rotate(Math.PI/4); ctx.strokeStyle=c; ctx.lineWidth=1.1/k; ctx.fillStyle="rgba(255,255,255,.12)";
+      const s=n.r*1.2; ctx.fillRect(-s/2,-s/2,s,s); ctx.strokeRect(-s/2,-s/2,s,s); ctx.restore();
+    } else if (n.kind==="area"){
+      ctx.fillStyle=c; ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,7); ctx.fill();
+    } else if (n.kind==="comune"||n.kind==="hub"){
+      ctx.fillStyle=c; ctx.shadowColor=c; ctx.shadowBlur=18; ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,7); ctx.fill(); ctx.shadowBlur=0;
+      ctx.strokeStyle=c; ctx.globalAlpha*=.5; ctx.lineWidth=1/k; ctx.beginPath(); ctx.arc(n.x,n.y,n.r+5,0,7); ctx.stroke();
+    } else {
+      ctx.fillStyle=c; if ((n.data.r==="Alta" && n.kind!=="scuola")||n===state.sel){ ctx.shadowColor=c; ctx.shadowBlur=10; }
+      ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,7); ctx.fill(); ctx.shadowBlur=0;
+      if (n.kind==="stake" && n.data.v==="Da verificare"){ ctx.strokeStyle="rgba(240,179,90,.9)"; ctx.lineWidth=1/k; ctx.beginPath(); ctx.arc(n.x,n.y,n.r+2.2,0,7); ctx.stroke(); }
+    }
+    if (n===state.sel && n.x!==undefined){ ctx.strokeStyle=css("--accent"); ctx.lineWidth=1.6/k; ctx.beginPath(); ctx.arc(n.x,n.y,n.r+5,0,7); ctx.stroke(); }
+  });
+  ctx.globalAlpha=1;
+  // labels
+  nodes.forEach(n => {
+    if (!visible(n)) return;
+    const f = state.hover||state.sel;
+    if (n.kind==="area"){
+      const on = selArea()===n.area;
+      ctx.font = `700 ${(on?15:13.5)/k}px "Bricolage Grotesque", sans-serif`; ctx.textAlign="center";
+      ctx.lineWidth = 4/k; ctx.strokeStyle = "rgba(8,13,24,.92)"; ctx.fillStyle = n.area.col; ctx.globalAlpha = (selArea() && !on)? .45 : 1;
+      const t = n.name.toUpperCase(); ctx.strokeText(t, n.x, n.y-8/k); ctx.fillText(t, n.x, n.y-8/k); ctx.textAlign="left"; ctx.globalAlpha=1; return;
+    }
+    const big = n.kind==="comune"||n.kind==="hub";
+    const cityLbl = n.kind!=="comune" || n.area.id==="mp" || k>0.5 || selArea()===n.area;
+    const show = (big && cityLbl) || n===f || (fs && fs.has(n.id) && ((adj.has(f.id) && adj.get(f.id).size<=14) || k>2.4)) || (k>2.2 && n.kind!=="opera") || (k>1.5 && n.kind==="stake" && n.data.r==="Alta" && !fs);
+    if (!show) return;
+    const size = big? (n.kind==="comune" && n.area.id!=="mp"? 11.5 : 13) : 11;
+    ctx.font = `${big?600:500} ${size/k}px ${big?'"Bricolage Grotesque"':'"IBM Plex Sans"'}, sans-serif`;
+    let t = n.name; if (!big && t.length>42) t = t.slice(0,40)+"…";
+    const dim = fs && !fs.has(n.id);
+    ctx.globalAlpha = dim? .25:1;
+    ctx.lineWidth = 3/k; ctx.strokeStyle = "rgba(8,13,24,.9)"; ctx.fillStyle = big? css("--ink") : "#d6deeb";
+    const x = n.x + (n.r+5)/1, y = n.y + (big? -n.r-8 : 3.5/k);
+    if (big){ ctx.textAlign="center"; ctx.strokeText(t,n.x,y); ctx.fillText(t,n.x,y); ctx.textAlign="left"; }
+    else { ctx.strokeText(t,x,y); ctx.fillText(t,x,y); }
+  });
+  ctx.globalAlpha=1; ctx.restore();
+}
+sim.on("tick", draw);
+
+// ---------- zoom & picking ----------
+const zoom = d3.zoom().scaleExtent([0.08,8]).on("zoom", e => { transform = e.transform; draw(); })
+  .on("start", ()=>canvas.classList.add("dragging")).on("end", ()=>canvas.classList.remove("dragging"));
+const sel = d3.select(canvas).call(zoom).on("dblclick.zoom", null);
+function pick(ev){
+  const [mx,my] = d3.pointer(ev, canvas); const [x,y] = transform.invert([mx,my]);
+  let best=null, bd=Infinity;
+  nodes.forEach(n => { if(!visible(n)) return; const d = Math.hypot(n.x-x,n.y-y); const lim = n.r + 7/transform.k; if (d<lim && d<bd){bd=d;best=n;} });
+  return best;
+}
+const tip = document.getElementById("tip");
+canvas.addEventListener("pointermove", ev => {
+  if (ev.buttons) return;
+  const n = pick(ev);
+  if (n!==state.hover){ state.hover=n; draw(); }
+  canvas.style.cursor = n? "pointer":"grab";
+  if (n){ tip.innerHTML = `${esc(n.name)}<small>${esc(subOf(n))}</small>`; tip.style.left = Math.min(ev.clientX+14, innerWidth-270)+"px"; tip.style.top=(ev.clientY+14)+"px"; tip.style.opacity=1; }
+  else tip.style.opacity=0;
+});
+canvas.addEventListener("pointerleave", ()=>{ state.hover=null; tip.style.opacity=0; draw(); });
+canvas.addEventListener("click", ev => { const n = pick(ev); if (n) select(n); else { closePanel(); } });
+
+function fit(animate=true){
+  const vis = nodes.filter(visible); const xs = vis.map(n=>n.x), ys = vis.map(n=>n.y);
+  const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const left = innerWidth>720? 360:16, right = document.getElementById("panel").classList.contains("open") && innerWidth>720 ? 420:16;
+  const w = W-left-right, h = H-40;
+  const k = Math.min(w/(x1-x0+80), h/(y1-y0+80), 2.2);
+  return applyFit(x0,x1,y0,y1,animate,k,left,w,h);
+}
+function applyFit(x0,x1,y0,y1,animate,k,left,w,h){
+  const t = d3.zoomIdentity.translate(left + w/2 - k*(x0+x1)/2, 20 + h/2 - k*(y0+y1)/2).scale(k);
+  (animate? sel.transition().duration(600):sel).call(zoom.transform, t);
+}
+function fitArea(a, animate=true){
+  const xs = a.hull.map(p=>p[0]), ys = a.hull.map(p=>p[1]).concat([byId.get(areaNodeId(a)).fy-30]);
+  const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const left = innerWidth>720? 360:16, right = innerWidth>720 ? 420:16;
+  const w = W-left-right, h = innerWidth>720? H-40 : H*0.38;
+  const k = Math.min(w/(x1-x0+60), h/(y1-y0+60), 2.6);
+  applyFit(x0,x1,y0,y1,animate,k,left,w,h);
+}
+function centerOn(n){
+  const right = innerWidth>720? 420:0; const k = Math.max(transform.k, 1.6);
+  const cx = (W-right)/2 + (innerWidth>720? 160:0), cy = innerWidth>720? H/2 : H*0.22;
+  sel.transition().duration(550).call(zoom.transform, d3.zoomIdentity.translate(cx - n.x*k, cy - n.y*k).scale(k));
+}
+document.getElementById("zin").onclick = ()=> sel.transition().duration(250).call(zoom.scaleBy, 1.5);
+document.getElementById("zout").onclick = ()=> sel.transition().duration(250).call(zoom.scaleBy, 1/1.5);
+document.getElementById("zfit").onclick = ()=> fit();
+
+// ---------- panel ----------
+const esc = s => String(s??"").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const eur = v => new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(v);
+function subOf(n){
+  if (n.kind==="stake") return `${CAT[n.cat].n} · ${n.data.com||""}`;
+  if (n.kind==="opera") return `Opera ${n.data.n} · ${n.data.com} · ${eur(n.data.e)}`;
+  if (n.kind==="comune") return `Comune · ${n.area.n}` + (n.data.ab? ` · ${n.data.ab.toLocaleString("it-IT")} ab.` : "");
+  if (n.kind==="area") return `${n.sub} · ${n.area.cs.length} comuni`;
+  if (n.kind==="scuola") return `${n.data.tp} · ${n.data.cs.join(", ")}`;
+  if (n.kind==="uni") return n.data.t;
+  return n.sub||"";
+}
+const panel = document.getElementById("panel"), phead = document.getElementById("phead"), pbody = document.getElementById("pbody");
+function neighbourList(n, filter){
+  const items = [...adj.get(n.id)].map(id=>byId.get(id)).filter(m => m && visible(m) && (!filter || filter(m)));
+  items.sort((a,b)=> (a.kind>b.kind?1:-1) || ((b.data?.r==="Alta") - (a.data?.r==="Alta")) || a.name.localeCompare(b.name));
+  return items;
+}
+function listHTML(items){
+  return `<div class="nlist">${items.map(m=>`<button data-id="${esc(m.id)}"><i style="background:${colorOf(m)};${m.kind==="opera"?"border-radius:1px;transform:rotate(45deg)":""}"></i>${esc(m.name)}<small>${esc(m.kind==="stake"? (m.data.r||""): m.kind==="opera"? eur(m.data.e) : m.kind==="comune"?"comune": m.kind==="uni"?"terziario": m.kind==="scuola"?"scuola": m.kind==="area"?"area":"")}</small></button>`).join("")}</div>`;
+}
+function refHTML(o){
+  const has = o.rf && o.rf!=="Da individuare";
+  let x = `<div class="sec"><h3>Referente</h3><div class="ref"><div class="rn">${has?esc(o.rf):'<span class="tag warn">Da individuare</span>'}</div><div class="rr">${esc(o.rr)}</div>`;
+  if (o.li) x += `<a class="li" href="${esc(o.li)}" target="_blank" rel="noopener">LinkedIn${/\/company\/|\/school\//.test(o.li)?" (pagina dell'ente)":""} ↗</a>`;
+  if (o.em) x += `<div class="contact" style="margin-top:8px"><code>${esc(o.em)}</code><button class="copy" data-copy="${esc(o.em)}">Copia</button></div>`;
+  if (o.rs && o.rs.startsWith("http")) x += `<a class="src" href="${esc(o.rs)}" target="_blank" rel="noopener">Fonte del nominativo ↗</a>`;
+  return x + `</div></div>`;
+}
+function select(n){
+  state.sel = n; draw(); tip.style.opacity=0;
+  let head = "", body = "";
+  if (n.kind==="stake"){
+    const s = n.data;
+    head = `<div class="eyebrow">${esc(s.id)} · ${esc(CAT[n.cat].n)}</div><h2>${esc(s.n)}</h2>
+      <div class="tags"><span class="tag ${esc(s.r)}">Rilevanza ${esc(s.r)}</span><span class="tag">${esc(s.com)}</span>${s.community?'<span class="tag Alta">Contributo della comunità</span>': s.v==="Da verificare"?'<span class="tag warn">Da verificare</span>':'<span class="tag">Verificato</span>'}</div>`;
+    body += refHTML(s);
+    body += `<div class="sec"><h3>Ruolo nel progetto</h3><p>${esc(s.ro)}</p></div>`;
+    body += `<div class="sec"><h3>Descrizione</h3><p>${esc(s.d)}</p></div>`;
+    if (s.ct) body += `<div class="sec"><h3>Contatti pubblici</h3><div class="contact"><code>${esc(s.ct)}</code><button class="copy" data-copy="${esc(s.ct)}">Copia</button></div></div>`;
+    const ops = neighbourList(n, m=>m.kind==="opera"); if (ops.length) body += `<div class="sec"><h3>Opere collegate</h3>${listHTML(ops)}</div>`;
+    const home = neighbourList(n, m=>m.kind==="comune"||m.kind==="hub"); if (home.length) body += `<div class="sec"><h3>Dove agisce</h3>${listHTML(home)}</div>`;
+    body += `<div class="sec"><div class="actions" style="margin:0"><button class="btn ghost" data-fix="${esc(s.id)}">Segnala una correzione</button>${(s.community && COLLAB.admin)?`<button class="btn danger" data-unapprove="${esc(s.id)}">Rimuovi dalla mappa</button>`:""}</div></div>`;
+    if (s.f.length || s.fn.length) body += `<div class="sec"><h3>${s.community?"Fonti indicate da chi ha proposto":"Fonti · controllate il 19/10/2026"}</h3><div class="links">${s.f.map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\/(www\.)?/,"").slice(0,70))}</a>`).join("")}${s.fn.map(t=>`<span class="sm" style="margin:0">${esc(t)}</span>`).join("")}</div></div>`;
+  } else if (n.kind==="comune"){
+    const c = n.data, st = neighbourList(n, m=>m.kind==="stake"), op = neighbourList(n, m=>m.kind==="opera");
+    const tot = op.reduce((a,m)=>a+m.data.e,0);
+    const ab = `<button class="tag" data-id="${esc(areaNodeId(n.area))}" style="cursor:pointer;border-color:${n.area.col};color:${n.area.col}">${esc(n.area.n)}</button>`;
+    if (!c.ab){
+      const sc = neighbourList(n, m=>m.kind==="scuola"||m.kind==="uni");
+      head = `<div class="eyebrow">Comune · ${n.area.t==="urbana"?"area urbana":"area interna SNAI"}</div><h2>${esc(c.n)}</h2><div class="tags">${ab}</div>`;
+      body += `<div class="sec"><h3>Scuole e istruzione · ${sc.length}</h3>${sc.length? listHTML(sc) : '<p class="sm" style="margin:0">Nessuna istituzione scolastica secondaria statale con sede qui (anagrafe MIM 2026/27).</p>'}</div>`;
+      if (st.length) body += `<div class="sec"><h3>Attori nel comune · ${st.length}</h3>${listHTML(st)}</div>`;
+      body += `<div class="sec"><h3>Mappatura degli attori</h3><p>Per questo comune la mappa riporta per ora le scuole. Enti locali, terzo settore, imprese e associazioni sono da censire.</p><div class="actions"><button class="btn ghost" data-propose="${esc(c.n)}">Proponi un ente in questo comune</button></div></div>`;
+      phead.innerHTML = head; pbody.innerHTML = body; pbody.scrollTop = 0; panel.classList.add("open"); centerOn(n); return;
+    }
+    head = `<div class="eyebrow">Comune dell'area pilota</div><h2>${esc(c.n)}</h2><div class="tags">${ab}<span class="tag">${c.ab.toLocaleString("it-IT")} abitanti</span><span class="tag">SNAI ${esc(c.snai)}</span></div>`;
+    body += `<div class="sec"><dl class="kv"><dt>Sindaco</dt><dd>${esc(c.s)}</dd><dt>Lista</dt><dd>${esc(c.l)}</dd><dt>Ambito sociale</dt><dd>${esc(c.amb)}</dd><dt>Diocesi</dt><dd>${esc(c.dio)}</dd><dt>Scuole</dt><dd>${esc(c.sc)}</dd></dl></div>`;
+    body += `<div class="sec"><h3>Opere 2021-27 · ${op.length} · ${eur(tot)}</h3>${listHTML(op)}</div>`;
+    body += `<div class="sec"><h3>Attori nel comune · ${st.length}</h3>${listHTML(st)}</div>`;
+  } else if (n.kind==="opera"){
+    const o = n.data, st = neighbourList(n, m=>m.kind==="stake");
+    head = `<div class="eyebrow">Opera n. ${o.n} · Strategia Futuro Dentro</div><h2>${esc(o.t)}</h2><div class="tags"><span class="tag">${eur(o.e)}</span><span class="tag">${esc(o.a)}</span><span class="tag ${o.p==="Alta"?"Alta":""}">Pertinenza OCPG ${esc(o.p)}</span></div>`;
+    body += `<div class="sec"><dl class="kv"><dt>Comune</dt><dd>${esc(o.com)}</dd><dt>Ufficio regionale</dt><dd>${esc(o.u)}</dd></dl></div>`;
+    body += `<div class="sec"><h3>Attori collegati · ${st.length}</h3>${st.length?listHTML(st):'<p class="sm" style="margin:0">Nessun attore collegato ancora: da individuare nel censimento della Fase 1.</p>'}</div>`;
+    body += `<div class="sec"><h3>Comune attuatore</h3>${listHTML(neighbourList(n, m=>m.kind==="comune"))}</div>`;
+  } else if (n.kind==="area"){
+    const a = n.area, cm = a.cs.map(c=>byId.get("C:"+c));
+    const inA = m => m.kind==="stake" && (m.data.cs||[]).some(c=>a.cs.includes(c));
+    const nStake = nodes.filter(m=>!m.hidden && (inA(m) || (a.id==="mp" && m.kind==="stake" && adj.get("H:AREA").has(m.id)))).length;
+    const nScu = nodes.filter(m=>m.kind==="scuola" && m.data.cs.some(c=>a.cs.includes(c))).length;
+    head = `<div class="eyebrow">${a.t==="urbana"?"Area urbana · strategia territoriale":"Area interna SNAI · 2021-27"}</div><h2 style="color:${a.col}">${esc(a.n)}</h2>
+      <div class="tags"><span class="tag">${a.cs.length} comuni</span>${a.id==="mp"?'<span class="tag Alta">Area pilota OCPG</span>':""}<span class="tag">${nStake} attori mappati</span>${nScu?`<span class="tag">${nScu} scuole</span>`:""}</div>`;
+    body += `<div class="sec"><h3>Comuni</h3>${listHTML(cm)}</div>`;
+    if (a.id==="mp"){
+      const sov = neighbourList(n, m=>m.kind==="stake");
+      body += `<div class="sec"><p>Mappatura completa: attori di ogni comune, referenti, contatti e le 28 opere della strategia <i>Futuro Dentro</i>.</p></div>`;
+      body += `<div class="sec"><h3>Soggetti d'area e intercomunali · ${sov.length}</h3>${listHTML(sov)}</div>`;
+    } else {
+      body += `<div class="sec"><h3>Stato della mappatura</h3><p>Per ora la mappa riporta comuni e scuole (anagrafe MIM 2026/27). Gli altri attori sono da censire: chi conosce il territorio può proporli.</p><div class="actions"><button class="btn ghost" data-propose="${esc(a.cs[0])}">Proponi un ente in quest'area</button></div></div>`;
+    }
+    phead.innerHTML = head; pbody.innerHTML = body; pbody.scrollTop = 0; panel.classList.add("open"); fitArea(a); syncALeg(); return;
+  } else if (n.kind==="scuola"){
+    const s = n.data;
+    head = `<div class="eyebrow">${s.par?"Scuola paritaria":"Istituzione scolastica statale"} · ${esc(s.id)}</div><h2>${esc(s.n)}</h2><div class="tags"><span class="tag">${esc(s.tp)}</span>${s.cs.map(c=>`<span class="tag">${esc(c)}</span>`).join("")}</div>`;
+    const ct = [s.em, s.pec].filter(Boolean).join(" · ");
+    body += `<div class="sec"><dl class="kv"><dt>Sede</dt><dd>${esc(s.ind)}</dd>${s.w?`<dt>Sito</dt><dd>${esc(s.w)}</dd>`:""}</dl></div>`;
+    if (ct) body += `<div class="sec"><h3>Contatti istituzionali</h3><div class="contact"><code>${esc(ct)}</code><button class="copy" data-copy="${esc(ct)}">Copia</button></div></div>`;
+    if (s.pl.length) body += `<div class="sec"><h3>Plessi · ${s.pl.length}</h3><div class="nlist">${s.pl.map(p=>`<div style="font-size:12.5px;padding:3px 6px;display:flex;gap:8px"><span>${esc(p[0])}</span><small style="margin-left:auto;color:var(--ink-3);white-space:nowrap">${esc(p[1])} · ${esc(p[2])}</small></div>`).join("")}</div></div>`;
+    body += `<div class="sec"><h3>Comuni serviti</h3>${listHTML(neighbourList(n, m=>m.kind==="comune"))}</div>`;
+    body += `<div class="sec"><h3>Fonte</h3><div class="links"><a href="https://dati.istruzione.it/opendata/opendata/catalogo/elements1/leaf/?datasetId=DS0400SCUANAGRAFESTAT" target="_blank" rel="noopener">Anagrafe scuole MIM, a.s. 2026/27 ↗</a></div></div>`;
+  } else if (n.kind==="uni"){
+    const u = n.data;
+    head = `<div class="eyebrow">Istruzione terziaria in Basilicata</div><h2>${esc(u.n)}</h2><div class="tags"><span class="tag">${esc(u.t)}</span></div>`;
+    body += refHTML(u);
+    body += `<div class="sec"><dl class="kv"><dt>Sede</dt><dd>${esc(u.sd)}</dd><dt>Studenti</dt><dd>${esc(u.st)}</dd><dt>Sito</dt><dd>${esc(u.w)}</dd></dl></div><div class="sec"><h3>Dettagli</h3><p>${esc(u.d)}</p></div>`;
+    if (u.f && u.f.startsWith("http")) body += `<div class="sec"><h3>Fonte</h3><div class="links">${u.f.split(" ; ").map(x=>`<a href="${esc(x)}" target="_blank" rel="noopener">${esc(x.replace(/^https?:\/\/(www\.)?/,"").slice(0,70))}</a>`).join("")}</div></div>`;
+  } else {
+    const st = neighbourList(n, m=>m.kind!=="hub");
+    head = `<div class="eyebrow">${esc(n.sub)}</div><h2>${esc(n.name)}</h2>`;
+    body += `<div class="sec"><h3>Collegati · ${st.length}</h3>${listHTML(st)}</div>`;
+  }
+  phead.innerHTML = head; pbody.innerHTML = body; pbody.scrollTop = 0;
+  panel.classList.add("open"); centerOn(n); syncALeg();
+}
+function closePanel(){ panel.classList.remove("open"); state.sel=null; syncALeg(); draw(); }
+document.getElementById("close").onclick = closePanel;
+document.addEventListener("keydown", e => { if (e.key==="Escape") closePanel(); });
+const toast = document.getElementById("toast");
+function say(t){ toast.textContent=t; toast.style.opacity=1; clearTimeout(say.t); say.t=setTimeout(()=>toast.style.opacity=0,1600); }
+panel.addEventListener("click", async e => {
+  const fx = e.target.closest("button[data-fix]"); if (fx){ openForm("correzione", fx.dataset.fix); return; }
+  const pr = e.target.closest("button[data-propose]"); if (pr){ openForm("nuovo", "", pr.dataset.propose); return; }
+  const un = e.target.closest("button[data-unapprove]"); if (un){ unapprove(un.dataset.unapprove); return; }
+  const ap = e.target.closest("button[data-approve]"); if (ap){ approve(ap.dataset.approve); return; }
+  const rj = e.target.closest("button[data-reject]"); if (rj){ reject(rj.dataset.reject); return; }
+  const b = e.target.closest("button[data-id]"); if (b){ select(byId.get(b.dataset.id)); return; }
+  const c = e.target.closest("button[data-copy]");
+  if (c){ try { await navigator.clipboard.writeText(c.dataset.copy); say("Contatti copiati"); }
+          catch { const r = document.createRange(); r.selectNodeContents(c.previousElementSibling); const s=getSelection(); s.removeAllRanges(); s.addRange(r); say("Testo selezionato: copia con Cmd/Ctrl+C"); } }
+});
+
+// ---------- legend & filters ----------
+const counts = {}; nodes.forEach(n=>{ if(n.cat) counts[n.cat]=(counts[n.cat]||0)+1; });
+const legend = document.getElementById("legend");
+Object.entries(CAT).forEach(([k,v]) => {
+  const b = document.createElement("button"); b.className="leg"; b.type="button"; b.setAttribute("aria-pressed","true");
+  b.innerHTML = `<i style="background:${v.c};color:${v.c}"></i><span>${v.n}</span><span>${counts[k]||0}</span>`;
+  b.onclick = e => {
+    const id = Number(k);
+    if (e.altKey || e.metaKey){ state.cats = new Set([id]); }
+    else state.cats.has(id)? state.cats.delete(id) : state.cats.add(id);
+    syncLegend(); draw();
+  };
+  b.ondblclick = () => { state.cats = new Set([Number(k)]); syncLegend(); draw(); };
+  b.dataset.k = k; legend.appendChild(b);
+});
+const aleg = document.getElementById("aleg");
+AREE.forEach(a => { const b = document.createElement("button"); b.className="aleg"; b.type="button"; b.dataset.a = a.id;
+  b.innerHTML = `<i class="${a.t==="urbana"?"urb":""}" style="background:${a.col}"></i><span>${esc(a.n)}</span><span>${a.cs.length}</span>`;
+  b.onclick = () => select(byId.get(areaNodeId(a))); aleg.appendChild(b); });
+function syncALeg(){ const sa = selArea(); aleg.querySelectorAll(".aleg").forEach(b => b.classList.toggle("on", !!sa && sa.id===b.dataset.a)); }
+function syncLegend(){ legend.querySelectorAll(".leg").forEach(b=>{ const on = state.cats.has(Number(b.dataset.k)); b.classList.toggle("off",!on); b.setAttribute("aria-pressed", on); }); }
+const rel = document.getElementById("rel");
+["Alta","Media","Bassa"].forEach(r => { const b=document.createElement("button"); b.className="chip"; b.textContent=r; b.setAttribute("aria-pressed","true");
+  b.onclick=()=>{ state.rel.has(r)? state.rel.delete(r): state.rel.add(r); b.setAttribute("aria-pressed", state.rel.has(r)); draw(); }; rel.appendChild(b); });
+function toggle(id, key){ const b=document.getElementById(id); b.onclick=()=>{ state[key]=!state[key]; b.setAttribute("aria-pressed", state[key]); draw(); }; }
+toggle("tOpere","opere"); toggle("tUni","uni"); toggle("tScu","scuole"); toggle("tVer","onlyVer");
+
+// stats
+function renderStats(){
+  const st = nodes.filter(n=>n.kind==="stake" && !n.hidden);
+  const nS = st.length, nA = st.filter(n=>n.data.r==="Alta").length, nC = st.filter(n=>n.data.community).length, tot = DATA.O.reduce((a,o)=>a+o.e,0);
+  document.getElementById("stats").innerHTML = `<span><b>${nS}</b> attori</span><span><b>${nA}</b> rilevanza alta</span><span><b>${DATA.O.length}</b> opere · ${eur(tot)}</span><span><b>${AREE.filter(a=>a.t==="interna").length}</b> aree interne + ${AREE.filter(a=>a.t==="urbana").length} urbane</span><span><b>${nodes.filter(n=>n.kind==="comune").length}</b> comuni</span>` + (nC? `<span><b>${nC}</b> dalla comunità</span>` : "");
+}
+renderStats();
+
+// ---------- search ----------
+const q = document.getElementById("q"), res = document.getElementById("results");
+const norm = s => String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+let hits = [], hi = 0;
+q.addEventListener("input", () => {
+  const t = norm(q.value.trim()); if (t.length<2){ res.hidden=true; return; }
+  hits = nodes.filter(n => norm(n.name).includes(t) || (n.kind==="uni" && norm(n.data.rf).includes(t)) || (n.kind==="stake" && (norm(n.data.rf).includes(t) || norm(n.data.em).includes(t) || norm(n.data.ct).includes(t) || norm(n.data.com).includes(t) || norm(n.data.d).includes(t)))).slice(0,30);
+  hi = 0; renderHits();
+});
+function renderHits(){
+  res.hidden = !hits.length;
+  res.innerHTML = hits.map((n,i)=>`<button class="${i===hi?"on":""}" data-i="${i}"><i style="width:8px;height:8px;border-radius:50%;background:${colorOf(n)};flex:none"></i>${esc(n.name.length>48?n.name.slice(0,46)+"…":n.name)}<small>${esc(n.kind==="stake"?CAT[n.cat].n: n.kind==="opera"?"opera": n.kind==="comune"?"comune · "+n.area.n: n.kind==="uni"?"terziario": n.kind==="scuola"?"scuola": n.kind==="area"?"area":"")}</small></button>`).join("");
+}
+res.addEventListener("click", e => { const b=e.target.closest("button"); if(!b) return; go(hits[+b.dataset.i]); });
+q.addEventListener("keydown", e => {
+  if (res.hidden) return;
+  if (e.key==="ArrowDown"){ hi=Math.min(hi+1,hits.length-1); renderHits(); e.preventDefault(); }
+  if (e.key==="ArrowUp"){ hi=Math.max(hi-1,0); renderHits(); e.preventDefault(); }
+  if (e.key==="Enter" && hits[hi]){ go(hits[hi]); }
+});
+function go(n){
+  if (n.kind==="stake"){ state.cats.add(n.cat); state.rel.add(n.data.r); if (state.onlyVer && n.data.v!=="Da verificare"){ state.onlyVer=false; document.getElementById("tVer").setAttribute("aria-pressed","false"); } syncLegend(); }
+  if (n.kind==="opera" && !state.opere){ state.opere=true; document.getElementById("tOpere").setAttribute("aria-pressed","true"); }
+  if (n.kind==="scuola"){ state.cats.add(5); syncLegend(); if (!state.scuole){ state.scuole=true; document.getElementById("tScu").setAttribute("aria-pressed","true"); } }
+  if (n.kind==="uni" && !state.uni){ state.uni=true; document.getElementById("tUni").setAttribute("aria-pressed","true"); }
+  res.hidden=true; q.blur(); select(n);
+}
+document.addEventListener("click", e => { if (!e.target.closest(".search")) res.hidden = true; });
+
+// ---------- collaborazione ----------
+// Se la pagina gira fuori da claude.ai (es. GitHub Pages), le proposte vanno su GitHub Issues.
+const REPO = "__REPO__";   // es. "nome-utente/costellazione-marmo-platano"
+const COLLAB = { db:null, user:null, uid:null, admin:false, canWrite:null, props:[] };
+const COMUNI = AREE.flatMap(a=>a.cs);
+const LEVELS = [["AREA","Area Marmo Platano (sovracomunale)"],["REG","Regione / provincia"],["NAZ","Nazionale / europeo"]];
+const fsel = (id, opts) => { document.getElementById(id).innerHTML = opts.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join(""); };
+fsel("f_cat", Object.entries(CAT).filter(([k])=>k!=="13").map(([k,v])=>[k,v.n]));
+document.getElementById("f_com").innerHTML = AREE.map(a=>`<optgroup label="${esc(a.n)}">${a.cs.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>`).join("")
+  + `<optgroup label="Altri livelli">${LEVELS.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join("")}</optgroup>`;
+const modal = document.getElementById("modal"), ferr = document.getElementById("ferr");
+const val = id => document.getElementById(id).value.trim();
+document.getElementById("f_tipo").addEventListener("change", e => { document.getElementById("w_target").hidden = e.target.value==="nuovo"; });
+function openForm(tipo="nuovo", target="", com=""){
+  if (!COLLAB.db && !REPO){ say("Le proposte non sono disponibili in questa vista"); return; }
+  document.getElementById("pform").reset();
+  document.getElementById("f_tipo").value = tipo; document.getElementById("w_target").hidden = tipo==="nuovo";
+  if (target){ const n = byId.get("S:"+target) || byId.get("A:"+target); document.getElementById("f_target").value = n? `${target} – ${n.name}` : target; if (n){ document.getElementById("f_nome").value = n.name; } }
+  if (com) document.getElementById("f_com").value = com;
+  ferr.textContent=""; modal.hidden=false; document.getElementById(tipo==="nuovo"?"f_nome":"f_desc").focus();
+}
+function closeForm(){ modal.hidden=true; }
+document.getElementById("bPropose").onclick = ()=>openForm();
+document.getElementById("fcancel").onclick = closeForm;
+modal.addEventListener("click", e => { if (e.target===modal) closeForm(); });
+document.addEventListener("keydown", e => { if (e.key==="Escape" && !modal.hidden) closeForm(); });
+const isUrl = s => /^https?:\/\/\S+\.\S+/.test(s);
+document.getElementById("pform").addEventListener("submit", async e => {
+  e.preventDefault();
+  const tipo = val("f_tipo");
+  const p = { tipo, target: val("f_target"), nome: val("f_nome"), cat: Number(val("f_cat")), com: val("f_com"), ril: val("f_ril"), ruolo: val("f_ruolo"),
+    desc: val("f_desc"), ref: val("f_ref"), rr: val("f_rr"), em: val("f_em"), li: val("f_li"), src: val("f_src") };
+  if (!p.nome) return ferr.textContent = "Scrivi il nome dell'ente.";
+  if (tipo!=="nuovo" && !p.desc) return ferr.textContent = "Descrivi la correzione o la richiesta.";
+  if (tipo==="nuovo" && !isUrl(p.src)) return ferr.textContent = "Aggiungi il link a una fonte pubblica (inizia con https://).";
+  if (p.li && !/^https:\/\/([a-z]{2,3}\.)?(www\.)?linkedin\.com\//i.test(p.li)) return ferr.textContent = "Il link LinkedIn deve iniziare con https://www.linkedin.com/";
+  if (p.em && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.em)) return ferr.textContent = "Controlla l'indirizzo email.";
+  if (!COLLAB.db){ // fallback GitHub
+    const body = Object.entries(p).filter(([,v])=>v!=="" && v!=null).map(([k,v])=>`**${k}**: ${v}`).join("\n");
+    window.open(`https://github.com/${REPO}/issues/new?labels=${tipo}&title=${encodeURIComponent((tipo==="nuovo"?"Nuovo ente: ":"Correzione: ")+p.nome)}&body=${encodeURIComponent(body)}`, "_blank", "noopener");
+    closeForm(); return;
+  }
+  const send = document.getElementById("fsend"); send.disabled = true; ferr.textContent = "";
+  try {
+    await COLLAB.db.collection("proposte").add({ ...p, by: COLLAB.uid || null, at: new Date().toISOString() });
+    closeForm(); say("Proposta inviata: comparirà dopo la revisione");
+  } catch(err){
+    ferr.textContent = err && err.code==="invalid_argument" ? "Non hai i permessi per proporre: chiedi a chi gestisce la mappa di renderti Collaboratore." : err && err.code==="quota_exceeded" ? "Lo spazio per le proposte è pieno: avvisa chi gestisce la mappa." : "Invio non riuscito, riprova tra poco.";
+  } finally { send.disabled = false; }
+});
+function toStake(id, p){
+  const com = p.com || "";
+  const isLvl = LEVELS.some(([v])=>v===com);
+  return { id, n:p.nome, c:p.cat, cn:(CAT[p.cat]||CAT[8]).n, com: isLvl? LEVELS.find(([v])=>v===com)[1] : com, d:p.desc||"", r:p.ril||"Media", ro:p.ruolo||"Da definire",
+    o:[], ct:"", f: isUrl(p.src)? [p.src]:[], fn:[], v:"Contributo", cs: isLvl? []:[com], lv: isLvl? com : null,
+    rf:p.ref||"Da individuare", rr:p.rr||"", li:p.li||"", em:p.em||"", rs: isUrl(p.src)? p.src:"", community:true };
+}
+function addCommunity(id, p){
+  const nid = "A:"+id, existing = byId.get(nid);
+  if (existing){ existing.hidden=false; return; }
+  const s = toStake(id, p);
+  const n = add({id:nid, kind:"stake", name:s.n, data:s, cat:s.c, r: s.r==="Alta"?4.6: s.r==="Media"?3.4:2.6});
+  adj.set(nid, new Set());
+  const anchor = s.cs.length? "C:"+s.cs[0] : s.lv==="NAZ"?"H:NAZ": s.lv==="AREA"?"H:AREA":"H:REG";
+  const a = byId.get(anchor); n.x = a.fx + (Math.random()-.5)*50; n.y = a.fy + (Math.random()-.5)*50;
+  links.push({source:anchor, target:nid, kind:"home"}); adj.get(anchor).add(nid); adj.get(nid).add(anchor);
+}
+function syncGraph(){ sim.nodes(nodes); sim.force("link").links(links); sim.alpha(0.3).restart(); renderStats(); draw(); }
+function renderReview(){
+  document.getElementById("nProp").textContent = COLLAB.props.length;
+  if (!(state.sel && state.sel.id==="__review")) return;
+  const items = COLLAB.props.map(d => { const p=d.p; return `<div class="prop"><b>${esc(p.nome)}</b>
+    <div class="meta">${esc(p.tipo==="nuovo"?"Nuovo ente":p.tipo==="correzione"?"Correzione":"Rimozione / rettifica")} · ${esc((CAT[p.cat]||{}).n||"")} · ${esc(p.com||"")}${p.target?" · riferito a "+esc(p.target):""} · ${esc((p.at||"").slice(0,10))}</div>
+    ${p.desc?`<p>${esc(p.desc)}</p>`:""}${p.ref?`<div class="meta">Referente: ${esc(p.ref)}${p.rr?" – "+esc(p.rr):""}${p.em?" · "+esc(p.em):""}</div>`:""}
+    ${p.src?`<a class="meta" href="${esc(p.src)}" target="_blank" rel="noopener" style="color:#9cc3ff">${esc(p.src.slice(0,80))}</a>`:""}
+    <div class="actions" style="margin:0">${p.tipo==="nuovo"?`<button class="btn" data-approve="${esc(d.id)}">Approva e pubblica</button>`:""}<button class="btn ghost" data-reject="${esc(d.id)}">${p.tipo==="nuovo"?"Rifiuta":"Segna come gestita"}</button></div></div>`; }).join("");
+  pbody.innerHTML = items || `<p class="sm" style="margin:0">Nessuna proposta in attesa.</p>`;
+}
+function openReview(){
+  state.sel = {id:"__review"}; draw();
+  phead.innerHTML = `<div class="eyebrow">Revisione</div><h2>Proposte della comunità</h2><p class="note" style="margin:0">Le correzioni e le richieste di rimozione non cambiano la mappa da sole: applicale ai dati e poi segnale come gestite.</p>`;
+  panel.classList.add("open"); renderReview();
+}
+document.getElementById("bReview").onclick = openReview;
+async function approve(id){
+  const d = COLLAB.props.find(x=>x.id===id); if (!d) return;
+  try { await COLLAB.db.collection("approvati").doc(id).set({ ...d.p, approvedAt:new Date().toISOString() }); await COLLAB.db.doc("proposte/"+id).delete(); say("Ente pubblicato sulla mappa"); }
+  catch { say("Approvazione non riuscita, riprova"); }
+}
+async function reject(id){ try { await COLLAB.db.doc("proposte/"+id).delete(); say("Proposta archiviata"); } catch { say("Operazione non riuscita, riprova"); } }
+async function unapprove(id){ try { await COLLAB.db.doc("approvati/"+id).delete(); closePanel(); say("Ente rimosso dalla mappa"); } catch { say("Rimozione non riuscita, riprova"); } }
+(async () => {
+  const cl = window.claude;
+  if (!cl || !cl.use){ if (!REPO){ document.getElementById("bPropose").hidden = true; document.getElementById("collabNote").textContent = "Versione statica della mappa."; } return; }
+  const [db, user] = await Promise.all([cl.use("db"), cl.use("user")]);
+  COLLAB.db = db; COLLAB.user = user;
+  if (!db){ if (!REPO){ document.getElementById("bPropose").hidden = true; document.getElementById("collabNote").textContent = "Accedi a Claude per proporre nuovi enti."; } return; }
+  if (user){ COLLAB.uid = await user.id(); COLLAB.admin = await user.canEdit(); COLLAB.canWrite = await user.can("data.write"); }
+  if (COLLAB.canWrite===false){ document.getElementById("bPropose").hidden = true; document.getElementById("collabNote").textContent = "Puoi consultare la mappa. Per proporre enti chiedi a chi la gestisce l'accesso da Collaboratore."; }
+  db.collection("approvati").onSnapshot(snap => {
+    const ids = new Set(snap.docs.map(d=>d.id));
+    snap.docs.forEach(d => addCommunity(d.id, d.data()));
+    nodes.forEach(n => { if (n.id.startsWith("A:") && !ids.has(n.id.slice(2))) n.hidden = true; });
+    syncGraph();
+  }, () => {});
+  if (COLLAB.admin){
+    document.getElementById("bReview").hidden = false;
+    db.collection("proposte").orderBy("at","desc").onSnapshot(snap => { COLLAB.props = snap.docs.map(d=>({id:d.id, p:d.data()})); renderReview(); }, () => {});
+  }
+})();
+
+// ---------- boot ----------
+if (innerWidth<=720) document.getElementById("filters").open = false;
+window.addEventListener("resize", resize);
+resize();
+for (let i=0;i<220;i++) sim.tick();
+fit(false);
+sim.alpha(0.15).restart();
+if (document.fonts) document.fonts.ready.then(draw);
+</script>
