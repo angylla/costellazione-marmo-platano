@@ -182,6 +182,9 @@ h1{font-family:var(--f-display);font-weight:700;font-size:24px;line-height:1.05;
       <button class="chip" id="tScu" aria-pressed="true">Scuole delle altre aree</button>
       <button class="chip" id="tVer" aria-pressed="false">Solo da verificare</button>
     </div>
+    <div class="lbl">Colora i comuni per (ISTAT)</div>
+    <div class="row" id="cmode"></div>
+    <div id="cmleg" class="sm" style="margin-top:6px" hidden></div>
     <p class="sm">Clic su un'area per vederne i comuni, su un punto per i dettagli e i contatti. Trascina per spostarti, rotella o pizzico per lo zoom.</p>
   </details>
 </div>
@@ -244,13 +247,34 @@ const SCU = [{"id": "MTIC808001", "n": "I.C. GRASSANO - MIGLIONICO", "tp": "Isti
 const K = 3000, LAT0 = 40.75, LON0 = 15.54;
 const proj = ([la,lo]) => [(lo-LON0)*K, -(la-LAT0)*K*1.32];
 const MP = AREE.find(a=>a.id==="mp");
+// Popolazione residente ISTAT (demo.istat.it, POSAS): 1° gennaio 2026 (stima) e 1° gennaio 2021. Classi d'età calcolate dalle età singole.
+const POP = {"Atella": {"tot": 3574, "m": 1788, "f": 1786, "a0_14": 385, "a15_34": 808, "a65": 854, "a80": 228, "cod": "076006", "t21": 3744}, "Barile": {"tot": 2491, "m": 1228, "f": 1263, "a0_14": 267, "a15_34": 550, "a65": 616, "a80": 179, "cod": "076011", "t21": 2664}, "Filiano": {"tot": 2609, "m": 1311, "f": 1298, "a0_14": 241, "a15_34": 515, "a65": 733, "a80": 195, "cod": "076032", "t21": 2800}, "Ginestra": {"tot": 655, "m": 330, "f": 325, "a0_14": 61, "a15_34": 147, "a65": 178, "a80": 56, "cod": "076099", "t21": 721}, "Lavello": {"tot": 12820, "m": 6618, "f": 6202, "a0_14": 1426, "a15_34": 3040, "a65": 2953, "a80": 800, "cod": "076043", "t21": 13139}, "Maschito": {"tot": 1398, "m": 705, "f": 693, "a0_14": 141, "a15_34": 275, "a65": 411, "a80": 113, "cod": "076047", "t21": 1511}, "Montemilone": {"tot": 1371, "m": 701, "f": 670, "a0_14": 110, "a15_34": 287, "a65": 389, "a80": 126, "cod": "076051", "t21": 1438}, "Rapolla": {"tot": 4080, "m": 2070, "f": 2010, "a0_14": 532, "a15_34": 893, "a65": 883, "a80": 216, "cod": "076064", "t21": 4146}, "Rionero in Vulture": {"tot": 12325, "m": 6145, "f": 6180, "a0_14": 1356, "a15_34": 2653, "a65": 3013, "a80": 829, "cod": "076066", "t21": 12652}, "Ripacandida": {"tot": 1528, "m": 786, "f": 742, "a0_14": 152, "a15_34": 349, "a65": 401, "a80": 106, "cod": "076067", "t21": 1594}, "Venosa": {"tot": 10560, "m": 5274, "f": 5286, "a0_14": 980, "a15_34": 2283, "a65": 2739, "a80": 802, "cod": "076095", "t21": 11093}, "Acerenza": {"tot": 2007, "m": 1008, "f": 999, "a0_14": 173, "a15_34": 387, "a65": 571, "a80": 184, "cod": "076002", "t21": 2204}, "Banzi": {"tot": 1131, "m": 571, "f": 560, "a0_14": 89, "a15_34": 253, "a65": 338, "a80": 112, "cod": "076009", "t21": 1230}, "Cancellara": {"tot": 1088, "m": 536, "f": 552, "a0_14": 72, "a15_34": 205, "a65": 362, "a80": 111, "cod": "076018", "t21": 1166}, "Forenza": {"tot": 1726, "m": 885, "f": 841, "a0_14": 153, "a15_34": 313, "a65": 539, "a80": 165, "cod": "076033", "t21": 1901}, "Genzano di Lucania": {"tot": 5036, "m": 2498, "f": 2538, "a0_14": 502, "a15_34": 1027, "a65": 1459, "a80": 482, "cod": "076036", "t21": 5377}, "Oppido Lucano": {"tot": 3468, "m": 1727, "f": 1741, "a0_14": 348, "a15_34": 728, "a65": 954, "a80": 316, "cod": "076056", "t21": 3627}, "Palazzo San Gervasio": {"tot": 4249, "m": 2160, "f": 2089, "a0_14": 399, "a15_34": 981, "a65": 1067, "a80": 298, "cod": "076057", "t21": 4540}, "San Chirico Nuovo": {"tot": 1076, "m": 548, "f": 528, "a0_14": 72, "a15_34": 196, "a65": 357, "a80": 132, "cod": "076073", "t21": 1225}, "Tolve": {"tot": 2843, "m": 1431, "f": 1412, "a0_14": 274, "a15_34": 605, "a65": 775, "a80": 243, "cod": "076090", "t21": 3047}, "Balvano": {"tot": 1650, "m": 859, "f": 791, "a0_14": 198, "a15_34": 276, "a65": 460, "a80": 145, "cod": "076008", "t21": 1751}, "Baragiano": {"tot": 2477, "m": 1237, "f": 1240, "a0_14": 303, "a15_34": 482, "a65": 651, "a80": 186, "cod": "076010", "t21": 2536}, "Bella": {"tot": 4530, "m": 2267, "f": 2263, "a0_14": 514, "a15_34": 905, "a65": 1209, "a80": 382, "cod": "076012", "t21": 4796}, "Castelgrande": {"tot": 783, "m": 410, "f": 373, "a0_14": 53, "a15_34": 118, "a65": 295, "a80": 84, "cod": "076021", "t21": 841}, "Muro Lucano": {"tot": 4828, "m": 2461, "f": 2367, "a0_14": 447, "a15_34": 887, "a65": 1460, "a80": 456, "cod": "076053", "t21": 4999}, "Pescopagano": {"tot": 1597, "m": 796, "f": 801, "a0_14": 130, "a15_34": 285, "a65": 526, "a80": 163, "cod": "076058", "t21": 1727}, "Rapone": {"tot": 827, "m": 403, "f": 424, "a0_14": 49, "a15_34": 172, "a65": 263, "a80": 107, "cod": "076065", "t21": 908}, "Ruoti": {"tot": 3164, "m": 1588, "f": 1576, "a0_14": 377, "a15_34": 613, "a65": 832, "a80": 225, "cod": "076071", "t21": 3383}, "Ruvo del Monte": {"tot": 935, "m": 466, "f": 469, "a0_14": 80, "a15_34": 188, "a65": 294, "a80": 101, "cod": "076072", "t21": 993}, "San Fele": {"tot": 2493, "m": 1250, "f": 1243, "a0_14": 174, "a15_34": 468, "a65": 835, "a80": 293, "cod": "076076", "t21": 2654}, "Calciano": {"tot": 616, "m": 312, "f": 304, "a0_14": 56, "a15_34": 113, "a65": 208, "a80": 57, "cod": "077004", "t21": 678}, "Ferrandina": {"tot": 7813, "m": 3899, "f": 3914, "a0_14": 767, "a15_34": 1631, "a65": 2144, "a80": 657, "cod": "077008", "t21": 8137}, "Garaguso": {"tot": 887, "m": 440, "f": 447, "a0_14": 80, "a15_34": 213, "a65": 220, "a80": 71, "cod": "077009", "t21": 1001}, "Grassano": {"tot": 4530, "m": 2258, "f": 2272, "a0_14": 464, "a15_34": 982, "a65": 1309, "a80": 364, "cod": "077011", "t21": 4865}, "Oliveto Lucano": {"tot": 328, "m": 161, "f": 167, "a0_14": 20, "a15_34": 32, "a65": 150, "a80": 71, "cod": "077019", "t21": 374}, "Pomarico": {"tot": 3657, "m": 1807, "f": 1850, "a0_14": 373, "a15_34": 738, "a65": 1071, "a80": 276, "cod": "077022", "t21": 3884}, "Salandra": {"tot": 2391, "m": 1181, "f": 1210, "a0_14": 225, "a15_34": 495, "a65": 693, "a80": 189, "cod": "077024", "t21": 2595}, "Tricarico": {"tot": 4629, "m": 2295, "f": 2334, "a0_14": 400, "a15_34": 968, "a65": 1433, "a80": 429, "cod": "077028", "t21": 4890}, "Accettura": {"tot": 1575, "m": 773, "f": 802, "a0_14": 166, "a15_34": 308, "a65": 447, "a80": 150, "cod": "077001", "t21": 1679}, "Aliano": {"tot": 804, "m": 401, "f": 403, "a0_14": 72, "a15_34": 156, "a65": 265, "a80": 94, "cod": "077002", "t21": 891}, "Cirigliano": {"tot": 279, "m": 129, "f": 150, "a0_14": 20, "a15_34": 35, "a65": 107, "a80": 33, "cod": "077005", "t21": 297}, "Craco": {"tot": 570, "m": 284, "f": 286, "a0_14": 52, "a15_34": 136, "a65": 162, "a80": 48, "cod": "077007", "t21": 651}, "Gorgoglione": {"tot": 828, "m": 427, "f": 401, "a0_14": 88, "a15_34": 163, "a65": 242, "a80": 78, "cod": "077010", "t21": 888}, "Missanello": {"tot": 464, "m": 225, "f": 239, "a0_14": 50, "a15_34": 113, "a65": 108, "a80": 33, "cod": "076049", "t21": 533}, "San Mauro Forte": {"tot": 1168, "m": 604, "f": 564, "a0_14": 109, "a15_34": 200, "a65": 371, "a80": 102, "cod": "077026", "t21": 1310}, "Stigliano": {"tot": 3369, "m": 1610, "f": 1759, "a0_14": 215, "a15_34": 567, "a65": 1270, "a80": 433, "cod": "077027", "t21": 3768}, "Armento": {"tot": 535, "m": 264, "f": 271, "a0_14": 38, "a15_34": 109, "a65": 149, "a80": 61, "cod": "076005", "t21": 577}, "Gallicchio": {"tot": 747, "m": 392, "f": 355, "a0_14": 71, "a15_34": 145, "a65": 213, "a80": 66, "cod": "076035", "t21": 824}, "Roccanova": {"tot": 1235, "m": 600, "f": 635, "a0_14": 87, "a15_34": 248, "a65": 402, "a80": 124, "cod": "076069", "t21": 1345}, "San Chirico Raparo": {"tot": 865, "m": 450, "f": 415, "a0_14": 56, "a15_34": 172, "a65": 298, "a80": 117, "cod": "076074", "t21": 955}, "Sant'Arcangelo": {"tot": 5922, "m": 2989, "f": 2933, "a0_14": 658, "a15_34": 1322, "a65": 1538, "a80": 397, "cod": "076080", "t21": 6062}, "Calvera": {"tot": 347, "m": 179, "f": 168, "a0_14": 21, "a15_34": 53, "a65": 136, "a80": 52, "cod": "076016", "t21": 361}, "Carbone": {"tot": 475, "m": 238, "f": 237, "a0_14": 11, "a15_34": 72, "a65": 201, "a80": 89, "cod": "076019", "t21": 550}, "Castelluccio Inferiore": {"tot": 1854, "m": 918, "f": 936, "a0_14": 182, "a15_34": 328, "a65": 567, "a80": 168, "cod": "076022", "t21": 1955}, "Castelluccio Superiore": {"tot": 703, "m": 361, "f": 342, "a0_14": 81, "a15_34": 125, "a65": 227, "a80": 59, "cod": "076023", "t21": 739}, "Castronuovo di Sant'Andrea": {"tot": 833, "m": 393, "f": 440, "a0_14": 49, "a15_34": 141, "a65": 327, "a80": 119, "cod": "076026", "t21": 943}, "Cersosimo": {"tot": 496, "m": 249, "f": 247, "a0_14": 32, "a15_34": 75, "a65": 180, "a80": 52, "cod": "076027", "t21": 571}, "Chiaromonte": {"tot": 1685, "m": 824, "f": 861, "a0_14": 161, "a15_34": 306, "a65": 520, "a80": 169, "cod": "076028", "t21": 1778}, "Episcopia": {"tot": 1188, "m": 579, "f": 609, "a0_14": 125, "a15_34": 220, "a65": 365, "a80": 113, "cod": "076030", "t21": 1276}, "Fardella": {"tot": 568, "m": 291, "f": 277, "a0_14": 50, "a15_34": 117, "a65": 193, "a80": 72, "cod": "076031", "t21": 559}, "Francavilla in Sinni": {"tot": 3823, "m": 1901, "f": 1922, "a0_14": 442, "a15_34": 780, "a65": 991, "a80": 263, "cod": "076034", "t21": 3987}, "Latronico": {"tot": 3950, "m": 1993, "f": 1957, "a0_14": 319, "a15_34": 734, "a65": 1320, "a80": 395, "cod": "076040", "t21": 4173}, "Noepoli": {"tot": 717, "m": 341, "f": 376, "a0_14": 59, "a15_34": 116, "a65": 263, "a80": 81, "cod": "076055", "t21": 773}, "Rotonda": {"tot": 3100, "m": 1542, "f": 1558, "a0_14": 298, "a15_34": 596, "a65": 910, "a80": 267, "cod": "076070", "t21": 3282}, "San Costantino Albanese": {"tot": 569, "m": 275, "f": 294, "a0_14": 29, "a15_34": 95, "a65": 208, "a80": 83, "cod": "076075", "t21": 624}, "San Giorgio Lucano": {"tot": 986, "m": 504, "f": 482, "a0_14": 79, "a15_34": 171, "a65": 352, "a80": 125, "cod": "077025", "t21": 1091}, "San Paolo Albanese": {"tot": 197, "m": 90, "f": 107, "a0_14": 10, "a15_34": 27, "a65": 87, "a80": 37, "cod": "076020", "t21": 226}, "San Severino Lucano": {"tot": 1313, "m": 658, "f": 655, "a0_14": 90, "a15_34": 238, "a65": 440, "a80": 151, "cod": "076078", "t21": 1419}, "Senise": {"tot": 6360, "m": 3198, "f": 3162, "a0_14": 671, "a15_34": 1305, "a65": 1654, "a80": 441, "cod": "076085", "t21": 6656}, "Teana": {"tot": 499, "m": 237, "f": 262, "a0_14": 38, "a15_34": 83, "a65": 177, "a80": 54, "cod": "076087", "t21": 551}, "Terranova di Pollino": {"tot": 951, "m": 461, "f": 490, "a0_14": 58, "a15_34": 159, "a65": 355, "a80": 126, "cod": "076088", "t21": 1065}, "Viggianello": {"tot": 2577, "m": 1293, "f": 1284, "a0_14": 201, "a15_34": 441, "a65": 867, "a80": 278, "cod": "076097", "t21": 2790}, "Grottole": {"tot": 1935, "m": 969, "f": 966, "a0_14": 176, "a15_34": 402, "a65": 549, "a80": 154, "cod": "077012", "t21": 2088}, "Matera": {"tot": 59368, "m": 29182, "f": 30186, "a0_14": 6742, "a15_34": 12581, "a65": 14744, "a80": 4418, "cod": "077014", "t21": 59794}, "Miglionico": {"tot": 2336, "m": 1236, "f": 1100, "a0_14": 209, "a15_34": 522, "a65": 643, "a80": 165, "cod": "077015", "t21": 2395}, "Montescaglioso": {"tot": 9197, "m": 4579, "f": 4618, "a0_14": 1133, "a15_34": 2050, "a65": 2329, "a80": 714, "cod": "077017", "t21": 9224}, "Avigliano": {"tot": 10318, "m": 5069, "f": 5249, "a0_14": 1034, "a15_34": 2176, "a65": 2637, "a80": 735, "cod": "076007", "t21": 10796}, "Brindisi Montagna": {"tot": 757, "m": 393, "f": 364, "a0_14": 50, "a15_34": 168, "a65": 185, "a80": 61, "cod": "076014", "t21": 840}, "Picerno": {"tot": 5581, "m": 2791, "f": 2790, "a0_14": 634, "a15_34": 1089, "a65": 1517, "a80": 443, "cod": "076059", "t21": 5687}, "Pietragalla": {"tot": 3742, "m": 1883, "f": 1859, "a0_14": 401, "a15_34": 705, "a65": 1018, "a80": 283, "cod": "076060", "t21": 3930}, "Pignola": {"tot": 6755, "m": 3352, "f": 3403, "a0_14": 842, "a15_34": 1409, "a65": 1438, "a80": 295, "cod": "076062", "t21": 6830}, "Potenza": {"tot": 63403, "m": 30604, "f": 32799, "a0_14": 6669, "a15_34": 12206, "a65": 17061, "a80": 4969, "cod": "076063", "t21": 65420}, "Tito": {"tot": 7002, "m": 3470, "f": 3532, "a0_14": 966, "a15_34": 1409, "a65": 1465, "a80": 338, "cod": "076089", "t21": 7162}, "Vaglio Basilicata": {"tot": 1754, "m": 845, "f": 909, "a0_14": 164, "a15_34": 323, "a65": 540, "a80": 147, "cod": "076094", "t21": 1903}};
+const POP_REG = {"tot": 525281, "t21": 545130, "var": -3.64, "pg": 20.58, "iv": 250.2, "p65": 26.58};
+const POP_SRC = "ISTAT, Popolazione residente al 1° gennaio 2026 (stima) e 2021 – demo.istat.it";
+function popAgg(cs){ const z={tot:0,m:0,f:0,a0_14:0,a15_34:0,a65:0,a80:0,t21:0}; cs.forEach(c=>{ const p=POP[c]; if(p) for(const k in z) z[k]+=p[k]||0; }); return popInd(z); }
+function popInd(p){ return {...p, var: p.t21? (p.tot-p.t21)/p.t21*100 : null, pg: p.a15_34/p.tot*100, p014: p.a0_14/p.tot*100, p65: p.a65/p.tot*100, iv: p.a0_14? p.a65/p.a0_14*100 : null}; }
+const popOf = c => POP[c]? popInd(POP[c]) : null;
+const fmtN = v => Math.round(v).toLocaleString("it-IT"), fmtP = (v,d=1) => (v>0?"+":"")+v.toLocaleString("it-IT",{maximumFractionDigits:d,minimumFractionDigits:d});
+const fmtPc = v => v.toLocaleString("it-IT",{maximumFractionDigits:1,minimumFractionDigits:1})+"%";
+function popHTML(p, title){
+  if (!p) return "";
+  const vc = p.var<0? "#ff9aa8" : "#7ccf9a";
+  return `<div class="sec"><h3>${title||"Popolazione ISTAT"}</h3><dl class="kv">
+    <dt>Residenti 1/1/2026</dt><dd><b>${fmtN(p.tot)}</b> <span class="sm" style="margin:0">(${fmtN(p.m)} M · ${fmtN(p.f)} F)</span></dd>
+    <dt>Variazione dal 2021</dt><dd style="color:${vc}">${fmtP(p.var)}% <span class="sm" style="margin:0">(${fmtN(p.t21)} nel 2021)</span></dd>
+    <dt>0-14 anni</dt><dd>${fmtN(p.a0_14)} · ${fmtPc(p.p014)}</dd>
+    <dt>Giovani 15-34</dt><dd>${fmtN(p.a15_34)} · ${fmtPc(p.pg)}</dd>
+    <dt>65 anni e più</dt><dd>${fmtN(p.a65)} · ${fmtPc(p.p65)}</dd>
+    <dt>Indice di vecchiaia</dt><dd>${p.iv? Math.round(p.iv) : "–"} <span class="sm" style="margin:0">anziani ogni 100 under 15</span></dd>
+  </dl><p class="sm" style="margin-top:6px">${POP_SRC}. Basilicata: giovani ${fmtPc(POP_REG.pg)}, indice di vecchiaia ${Math.round(POP_REG.iv)}, variazione ${fmtP(POP_REG.var)}%.</p></div>`;
+}
 const areaNodeId = a => a.id==="mp" ? "H:AREA" : "AR:"+a.id;
 
 // ---------- build graph ----------
 const nodes = [], links = [], byId = new Map();
 function add(n){ nodes.push(n); byId.set(n.id,n); return n; }
 const CDATA = new Map(DATA.C.map(c=>[c.n,c]));
-AREE.forEach(a => a.cs.forEach(c => { const [x,y] = proj(GEO[c]); add({id:"C:"+c, kind:"comune", name:c, data:CDATA.get(c)||{n:c}, area:a, fx:x, fy:y, r: a.id==="mp"?7:4.6}); }));
+AREE.forEach(a => a.cs.forEach(c => { const [x,y] = proj(GEO[c]); const pp = POP[c]? POP[c].tot : 1000; add({id:"C:"+c, kind:"comune", name:c, data:CDATA.get(c)||{n:c}, area:a, fx:x, fy:y, r: Math.min(16, 3.2 + Math.sqrt(pp/1000)*1.7)}); }));
 AREE.forEach(a => {
   const pts = a.cs.map(c=>byId.get("C:"+c)), pad = [];
   pts.forEach(p => { for (let i=0;i<14;i++){ const t=i/14*Math.PI*2; pad.push([p.fx+Math.cos(t)*46, p.fy+Math.sin(t)*46]); } });
@@ -289,7 +313,7 @@ const adj = new Map(nodes.map(n=>[n.id,new Set()]));
 links.forEach(l => { adj.get(l.source).add(l.target); adj.get(l.target).add(l.source); });
 
 // ---------- state ----------
-const state = { cats:new Set(Object.keys(CAT).map(Number)), rel:new Set(["Alta","Media","Bassa"]), opere:true, uni:true, scuole:true, onlyVer:false, sel:null, hover:null, area:null };
+const state = { cats:new Set(Object.keys(CAT).map(Number)), rel:new Set(["Alta","Media","Bassa"]), opere:true, uni:true, scuole:true, onlyVer:false, sel:null, hover:null, area:null, cmode:"area" };
 function visible(n){
   if (n.hidden) return false;
   if (n.kind==="comune"||n.kind==="hub"||n.kind==="area") return true;
@@ -318,7 +342,16 @@ let W=0,H=0,DPR=1, transform = d3.zoomIdentity;
 const stars = Array.from({length:260},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.1+.2,a:Math.random()*.5+.15}));
 function resize(){ DPR = Math.min(window.devicePixelRatio||1,2); W = canvas.clientWidth; H = canvas.clientHeight; canvas.width=W*DPR; canvas.height=H*DPR; draw(); }
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-function colorOf(n){ return n.kind==="opera"? OPERA_C : (n.kind==="comune"||n.kind==="area")? n.area.col : n.kind==="hub"? "#cfd9ec" : CAT[n.cat].c; }
+const CMODES = {
+  area:{ l:"Area" },
+  var:{ l:"Variazione 2021-26", f:p=>p.var, dom:[-10,-3.6,2], i:d3.interpolateRdYlGn, fmt:v=>fmtP(v)+"%" },
+  pg:{ l:"% giovani 15-34", f:p=>p.pg, dom:[15,20.6,24], i:d3.interpolateRdYlGn, fmt:v=>fmtPc(v) },
+  iv:{ l:"Indice di vecchiaia", f:p=>p.iv, dom:[170,250,450], i:t=>d3.interpolateRdYlGn(1-t), fmt:v=>Math.round(v) }
+};
+function cmScale(m){ const M=CMODES[m]; return v => M.i(v<=M.dom[1]? 0.5*Math.max(0,(v-M.dom[0])/(M.dom[1]-M.dom[0])) : 0.5+0.5*Math.min(1,(v-M.dom[1])/(M.dom[2]-M.dom[1]))); }
+function colorOf(n){
+  if (n.kind==="comune" && state.cmode!=="area"){ const p=popOf(n.name); return p? cmScale(state.cmode)(CMODES[state.cmode].f(p)) : "#888"; }
+  return n.kind==="opera"? OPERA_C : (n.kind==="comune"||n.kind==="area")? n.area.col : n.kind==="hub"? "#cfd9ec" : CAT[n.cat].c; }
 function selArea(){ const f = state.sel; return f && f.kind==="area" ? f.area : f && f.kind==="comune" ? f.area : state.area; }
 
 function focusSet(){
@@ -468,7 +501,7 @@ const eur = v => new Intl.NumberFormat("it-IT",{style:"currency",currency:"EUR",
 function subOf(n){
   if (n.kind==="stake") return `${CAT[n.cat].n} · ${n.data.com||""}`;
   if (n.kind==="opera") return `Opera ${n.data.n} · ${n.data.com} · ${eur(n.data.e)}`;
-  if (n.kind==="comune") return `Comune · ${n.area.n}` + (n.data.ab? ` · ${n.data.ab.toLocaleString("it-IT")} ab.` : "");
+  if (n.kind==="comune"){ const p=popOf(n.name); return `Comune · ${n.area.n}` + (p? ` · ${fmtN(p.tot)} ab. (${fmtP(p.var)}% dal 2021)` : ""); }
   if (n.kind==="area") return `${n.sub} · ${n.area.cs.length} comuni`;
   if (n.kind==="scuola") return `${n.data.tp} · ${n.data.cs.join(", ")}`;
   if (n.kind==="uni") return n.data.t;
@@ -512,13 +545,16 @@ function select(n){
     const ab = `<button class="tag" data-id="${esc(areaNodeId(n.area))}" style="cursor:pointer;border-color:${n.area.col};color:${n.area.col}">${esc(n.area.n)}</button>`;
     if (!c.ab){
       const sc = neighbourList(n, m=>m.kind==="scuola"||m.kind==="uni");
-      head = `<div class="eyebrow">Comune · ${n.area.t==="urbana"?"area urbana":"area interna SNAI"}</div><h2>${esc(c.n)}</h2><div class="tags">${ab}</div>`;
+      const pq = popOf(c.n);
+      head = `<div class="eyebrow">Comune · ${n.area.t==="urbana"?"area urbana":"area interna SNAI"}</div><h2>${esc(c.n)}</h2><div class="tags">${ab}${pq?`<span class="tag">${fmtN(pq.tot)} abitanti</span>`:""}</div>`;
+      body += popHTML(pq);
       body += `<div class="sec"><h3>Scuole e istruzione · ${sc.length}</h3>${sc.length? listHTML(sc) : '<p class="sm" style="margin:0">Nessuna istituzione scolastica secondaria statale con sede qui (anagrafe MIM 2026/27).</p>'}</div>`;
       if (st.length) body += `<div class="sec"><h3>Attori nel comune · ${st.length}</h3>${listHTML(st)}</div>`;
       body += `<div class="sec"><h3>Mappatura degli attori</h3><p>Per questo comune la mappa riporta per ora le scuole. Enti locali, terzo settore, imprese e associazioni sono da censire.</p><div class="actions"><button class="btn ghost" data-propose="${esc(c.n)}">Proponi un ente in questo comune</button></div></div>`;
       phead.innerHTML = head; pbody.innerHTML = body; pbody.scrollTop = 0; panel.classList.add("open"); centerOn(n); return;
     }
-    head = `<div class="eyebrow">Comune dell'area pilota</div><h2>${esc(c.n)}</h2><div class="tags">${ab}<span class="tag">${c.ab.toLocaleString("it-IT")} abitanti</span><span class="tag">SNAI ${esc(c.snai)}</span></div>`;
+    head = `<div class="eyebrow">Comune dell'area pilota</div><h2>${esc(c.n)}</h2><div class="tags">${ab}<span class="tag">${fmtN((popOf(c.n)||{tot:c.ab}).tot)} abitanti</span><span class="tag">SNAI ${esc(c.snai)}</span></div>`;
+    body += popHTML(popOf(c.n));
     body += `<div class="sec"><dl class="kv"><dt>Sindaco</dt><dd>${esc(c.s)}</dd><dt>Lista</dt><dd>${esc(c.l)}</dd><dt>Ambito sociale</dt><dd>${esc(c.amb)}</dd><dt>Diocesi</dt><dd>${esc(c.dio)}</dd><dt>Scuole</dt><dd>${esc(c.sc)}</dd></dl></div>`;
     body += `<div class="sec"><h3>Opere 2021-27 · ${op.length} · ${eur(tot)}</h3>${listHTML(op)}</div>`;
     body += `<div class="sec"><h3>Attori nel comune · ${st.length}</h3>${listHTML(st)}</div>`;
@@ -534,8 +570,10 @@ function select(n){
     const nStake = nodes.filter(m=>!m.hidden && (inA(m) || (a.id==="mp" && m.kind==="stake" && adj.get("H:AREA").has(m.id)))).length;
     const nScu = nodes.filter(m=>m.kind==="scuola" && m.data.cs.some(c=>a.cs.includes(c))).length;
     head = `<div class="eyebrow">${a.t==="urbana"?"Area urbana · strategia territoriale":"Area interna SNAI · 2021-27"}</div><h2 style="color:${a.col}">${esc(a.n)}</h2>
-      <div class="tags"><span class="tag">${a.cs.length} comuni</span>${a.id==="mp"?'<span class="tag Alta">Area pilota OCPG</span>':""}<span class="tag">${nStake} attori mappati</span>${nScu?`<span class="tag">${nScu} scuole</span>`:""}</div>`;
-    body += `<div class="sec"><h3>Comuni</h3>${listHTML(cm)}</div>`;
+      <div class="tags"><span class="tag">${a.cs.length} comuni</span><span class="tag">${fmtN(popAgg(a.cs).tot)} abitanti</span>${a.id==="mp"?'<span class="tag Alta">Area pilota OCPG</span>':""}<span class="tag">${nStake} attori mappati</span>${nScu?`<span class="tag">${nScu} scuole</span>`:""}</div>`;
+    const pa = popAgg(a.cs);
+    body += popHTML(pa, "Popolazione dell'area (ISTAT)");
+    body += `<div class="sec"><h3>Comuni per residenti</h3><div class="nlist">${[...cm].sort((x,y)=>(POP[y.name]?.tot||0)-(POP[x.name]?.tot||0)).map(m=>{ const p=popOf(m.name); return `<button data-id="${esc(m.id)}"><i style="background:${colorOf(m)}"></i>${esc(m.name)}<small>${p?fmtN(p.tot)+" · "+fmtP(p.var)+"%":""}</small></button>`; }).join("")}</div></div>`;
     if (a.id==="mp"){
       const sov = neighbourList(n, m=>m.kind==="stake");
       body += `<div class="sec"><p>Mappatura completa: attori di ogni comune, referenti, contatti e le 28 opere della strategia <i>Futuro Dentro</i>.</p></div>`;
@@ -610,13 +648,19 @@ const rel = document.getElementById("rel");
 ["Alta","Media","Bassa"].forEach(r => { const b=document.createElement("button"); b.className="chip"; b.textContent=r; b.setAttribute("aria-pressed","true");
   b.onclick=()=>{ state.rel.has(r)? state.rel.delete(r): state.rel.add(r); b.setAttribute("aria-pressed", state.rel.has(r)); draw(); }; rel.appendChild(b); });
 function toggle(id, key){ const b=document.getElementById(id); b.onclick=()=>{ state[key]=!state[key]; b.setAttribute("aria-pressed", state[key]); draw(); }; }
+const cmodeEl = document.getElementById("cmode"), cmleg = document.getElementById("cmleg");
+Object.entries(CMODES).forEach(([k,M]) => { const b=document.createElement("button"); b.className="chip"; b.textContent=M.l; b.dataset.k=k; b.setAttribute("aria-pressed", k==="area");
+  b.onclick=()=>{ state.cmode=k; cmodeEl.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed", x.dataset.k===k)); renderCmLeg(); draw(); }; cmodeEl.appendChild(b); });
+function renderCmLeg(){ const k=state.cmode; cmleg.hidden = k==="area"; if (k==="area") return; const M=CMODES[k], s=cmScale(k);
+  const stops = d3.range(0,1.01,0.1).map(t=>{ const v = t<=.5? M.dom[0]+(M.dom[1]-M.dom[0])*t/.5 : M.dom[1]+(M.dom[2]-M.dom[1])*(t-.5)/.5; return s(v); });
+  cmleg.innerHTML = `<div style="height:8px;border-radius:4px;background:linear-gradient(90deg,${stops.join(",")})"></div><div style="display:flex;justify-content:space-between;margin-top:3px"><span>${M.fmt(M.dom[0])}</span><span>${M.fmt(M.dom[1])}</span><span>${M.fmt(M.dom[2])}+</span></div><div>Dimensione del punto = residenti. Fonte ISTAT 2026.</div>`; }
 toggle("tOpere","opere"); toggle("tUni","uni"); toggle("tScu","scuole"); toggle("tVer","onlyVer");
 
 // stats
 function renderStats(){
   const st = nodes.filter(n=>n.kind==="stake" && !n.hidden);
   const nS = st.length, nA = st.filter(n=>n.data.r==="Alta").length, nC = st.filter(n=>n.data.community).length, tot = DATA.O.reduce((a,o)=>a+o.e,0);
-  document.getElementById("stats").innerHTML = `<span><b>${nS}</b> attori</span><span><b>${nA}</b> rilevanza alta</span><span><b>${DATA.O.length}</b> opere · ${eur(tot)}</span><span><b>${AREE.filter(a=>a.t==="interna").length}</b> aree interne + ${AREE.filter(a=>a.t==="urbana").length} urbane</span><span><b>${nodes.filter(n=>n.kind==="comune").length}</b> comuni</span>` + (nC? `<span><b>${nC}</b> dalla comunità</span>` : "");
+  document.getElementById("stats").innerHTML = `<span><b>${nS}</b> attori</span><span><b>${nA}</b> rilevanza alta</span><span><b>${DATA.O.length}</b> opere · ${eur(tot)}</span><span><b>${AREE.filter(a=>a.t==="interna").length}</b> aree interne + ${AREE.filter(a=>a.t==="urbana").length} urbane</span><span><b>${nodes.filter(n=>n.kind==="comune").length}</b> comuni</span><span><b>${fmtN(popAgg(Object.keys(POP)).tot)}</b> abitanti (ISTAT 2026)</span>` + (nC? `<span><b>${nC}</b> dalla comunità</span>` : "");
 }
 renderStats();
 
@@ -694,7 +738,8 @@ function infoComune(nome){
   const n = byId.get("C:"+c), d = n.data, pl = PLESSI[c]||[];
   const perCat = {}; findNodes({comune:c}).filter(m=>m.kind!=="comune").forEach(m=>{ const k=kindLabel(m); perCat[k]=(perCat[k]||0)+1; });
   const o = { comune:c, id:"C:"+c, area:n.area.n, tipo_area:n.area.t, attori_per_tipo:perCat, plessi_scolastici_mim: pl.length };
-  if (d.ab) Object.assign(o,{abitanti:d.ab, sindaco:d.s, lista:d.l, classe_snai:d.snai, ambito_sociale:d.amb, diocesi:d.dio, scuole_note:d.sc});
+  const pp = popOf(c); if (pp) o.popolazione_istat = {residenti_2026:pp.tot, maschi:pp.m, femmine:pp.f, residenti_2021:pp.t21, variazione_pct_2021_2026:+pp.var.toFixed(1), eta_0_14:pp.a0_14, giovani_15_34:pp.a15_34, pct_giovani_15_34:+pp.pg.toFixed(1), over_65:pp.a65, pct_over_65:+pp.p65.toFixed(1), over_80:pp.a80, indice_vecchiaia:Math.round(pp.iv), fonte:POP_SRC};
+  if (d.ab) Object.assign(o,{sindaco:d.s, lista:d.l, classe_snai:d.snai, ambito_sociale:d.amb, diocesi:d.dio, scuole_note:d.sc});
   return o;
 }
 function plessiComune(nome, livello=""){
@@ -705,6 +750,7 @@ function plessiComune(nome, livello=""){
 
 // ---- risposte locali (senza Claude) ----
 const KW = [
+  [/abitant|popolaz|resident|giovan|anzian|vecchiaia|spopol|demograf/, "pop"],
   [/scuol|istitut|liceo|plessi|alunn|studen/, "scuole"], [/opere|opera|intervent|progett|finanziam|fondi/, "opere"],
   [/universit|afam|conservatorio|accademia/, 13], [/sport|calcio|palestr|outdoor|escursion/, 9], [/associaz|terzo settore|volontar|pro loco|cultural/, 8],
   [/chies|parrocch|dioces|oratori/, 7], [/sanit|welfare|asl|ospedal|sociale|anzian/, 6], [/impres|aziend|economi|lavoro|commerc|agricol/, 11],
@@ -717,6 +763,12 @@ function localAnswer(q){
   const hit = KW.find(([re])=>re.test(t)); const what = hit? hit[1] : null;
   const where = com || (ar && ar.n);
   const L = ns => ns.slice(0,40).map(n=>`- [[${n.id}]]`).join("\n") + (ns.length>40? `\n- … e altri ${ns.length-40}` : "");
+  if (what==="pop"){
+    if (com){ const p=popOf(com); return `**${com}** (ISTAT, 1/1/2026): **${fmtN(p.tot)} residenti**, ${fmtP(p.var)}% rispetto al 2021 (${fmtN(p.t21)}).\n- 0-14 anni: ${fmtN(p.a0_14)} (${fmtPc(p.p014)})\n- giovani 15-34: ${fmtN(p.a15_34)} (${fmtPc(p.pg)})\n- 65 e più: ${fmtN(p.a65)} (${fmtPc(p.p65)})\n- indice di vecchiaia: ${Math.round(p.iv)}\n\n[[C:${com}]]`; }
+    const cs = ar? ar.cs : Object.keys(POP), p = popAgg(cs);
+    const rows = cs.map(c=>[c,popOf(c)]).sort((x,y)=>y[1].tot-x[1].tot);
+    return `**${ar? ar.n : "Tutte le aree"}** (ISTAT, 1/1/2026): **${fmtN(p.tot)} residenti**, ${fmtP(p.var)}% dal 2021 · giovani 15-34 ${fmtPc(p.pg)} · indice di vecchiaia ${Math.round(p.iv)}\n` + rows.slice(0,40).map(([c,q])=>`- [[C:${c}]]: ${fmtN(q.tot)} (${fmtP(q.var)}%)`).join("\n");
+  }
   if (what==="scuole" && com){
     const pl = PLESSI[com]||[], vere = pl.filter(p=>p[2]!=="Sede istituto");
     const by = LIV_ORD.map(l=>[l, vere.filter(p=>p[2]===l)]).filter(([,v])=>v.length);
@@ -750,7 +802,7 @@ function md(s){
   return (inList? out+"</ul>" : out).replace(/(<br>){3,}/g,"<br><br>");
 }
 function renderChat(){
-  const sug = ["Quante scuole ci sono a Muro Lucano? Quali sono i nomi?","Quali opere ci sono a Bella e quanto valgono?","Chi sono gli attori di rilevanza alta per lo sport?","Quali comuni fanno parte del Vulture?"];
+  const sug = ["Quanti abitanti ha Muro Lucano e quanti sono giovani?","Quali comuni del Marmo Platano hanno perso più popolazione dal 2021?","Quante scuole ci sono a Muro Lucano? Quali sono i nomi?","Quali opere ci sono a Bella e quanto valgono?","Chi sono gli attori di rilevanza alta per lo sport?","Quali comuni fanno parte del Vulture?"];
   pbody.innerHTML = (CHAT.html.length? CHAT.html.join("") : `<p class="sm" style="margin:0">Fai una domanda sui dati della mappa: comuni, aree, scuole, enti, referenti, opere.</p><div class="sugg">${sug.map(s=>`<button class="chip" data-ask="${esc(s)}">${esc(s)}</button>`).join("")}</div>`);
   pbody.scrollTop = pbody.scrollHeight;
 }
@@ -767,6 +819,7 @@ Contenuto della mappa:
 - Aree della strategia 2021-27: ${AREE.map(a=>`${a.n} (${a.t}): ${a.cs.join(", ")}`).join("; ")}.
 - Marmo Platano è l'area pilota, mappata per intero (${DATA.S.length} attori con referenti, ${DATA.O.length} opere della strategia "Futuro Dentro"). Nelle altre aree ci sono per ora comuni e scuole.
 - Categorie degli attori (numero: nome): ${Object.entries(CAT).map(([k,v])=>k+": "+v.n).join("; ")}.
+- Popolazione: dati ufficiali ISTAT (residenti al 1/1/2026, stima, e al 1/1/2021) per tutti gli 84 comuni, con classi d'età; usa comune o classifica_popolazione.
 - Per contare le scuole di un comune usa plessi_scolastici (anagrafe MIM 2026/27); "Sede istituto" non è un plesso con alunni.
 Formato: testo semplice con **grassetto** ed elenchi "- ". Quando nomini un elemento che ha un id, scrivi [[id]] (es. [[S:S040]], [[C:Muro Lucano]]): la pagina lo trasforma in un link con il nome, quindi non ripetere il nome accanto. Per elenchi lunghi mostra al massimo 25 elementi e indica quanti sono in totale.`;
 const TOOLS = [
@@ -777,6 +830,12 @@ const TOOLS = [
     inputSchema:{type:"object",properties:{id:{type:"string"}},required:["id"]}, execute:(i)=>scheda(String(i.id)) },
   { name:"comune", description:"Scheda di un comune: area, abitanti, sindaco, numero di attori per tipo, numero di plessi scolastici.",
     inputSchema:{type:"object",properties:{nome:{type:"string"}},required:["nome"]}, execute:(i)=>infoComune(String(i.nome)) },
+  { name:"classifica_popolazione", description:"Indicatori ISTAT 2026 per i comuni (tutti o di un'area), ordinati per un indicatore: residenti, variazione (% 2021-26), giovani (% 15-34), anziani (% 65+), vecchiaia (indice). Restituisce anche il totale dell'insieme.",
+    inputSchema:{type:"object",properties:{indicatore:{type:"string",enum:["residenti","variazione","giovani","anziani","vecchiaia"]},area:{type:"string"},ordine:{type:"string",enum:["desc","asc"]}}},
+    execute:(i)=>{ const ar = i.area? AREE.find(a=>norm(a.n).includes(norm(String(i.area)))) : null; const cs = ar? ar.cs : Object.keys(POP);
+      const k = {residenti:"tot",variazione:"var",giovani:"pg",anziani:"p65",vecchiaia:"iv"}[String(i.indicatore||"residenti")]||"tot";
+      const rows = cs.map(c=>{ const p=popOf(c); return {comune:c, id:"C:"+c, area:byId.get("C:"+c).area.n, residenti:p.tot, variazione_pct:+p.var.toFixed(1), pct_giovani_15_34:+p.pg.toFixed(1), pct_over_65:+p.p65.toFixed(1), indice_vecchiaia:Math.round(p.iv), _k:p[k]}; }).sort((a,b)=> i.ordine==="asc"? a._k-b._k : b._k-a._k);
+      const t = popAgg(cs); return {insieme: ar? ar.n : "tutti gli 84 comuni", totale:{residenti:t.tot, variazione_pct:+t.var.toFixed(1), pct_giovani_15_34:+t.pg.toFixed(1), indice_vecchiaia:Math.round(t.iv)}, comuni: rows.map(({_k,...r})=>r), fonte:POP_SRC}; } },
   { name:"plessi_scolastici", description:"Elenco dei plessi scolastici statali e paritari di un comune (anagrafe MIM 2026/27), con livello (Infanzia, Primaria, Secondaria I grado, Secondaria II grado...) e istituto. Filtro livello opzionale.",
     inputSchema:{type:"object",properties:{comune:{type:"string"},livello:{type:"string"}},required:["comune"]}, execute:(i)=>plessiComune(String(i.comune), String(i.livello||"")) }
 ];
