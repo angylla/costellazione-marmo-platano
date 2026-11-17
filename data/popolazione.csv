@@ -33,7 +33,7 @@ codice_istat,comune,area,residenti_2026,maschi,femmine,residenti_2021,eta_0_14,e
 077008,Ferrandina,Medio Basento,7813,3899,3914,8137,767,1631,2144,657
 077009,Garaguso,Medio Basento,887,440,447,1001,80,213,220,71
 077011,Grassano,Medio Basento,4530,2258,2272,4865,464,982,1309,364
-077019,Oliveto Lucano,Medio Basento,328,161,167,374,20,32,150,71
+077013,Irsina,Medio Basento,4292,2253,2039,4459,363,1024,1226,437
 077022,Pomarico,Medio Basento,3657,1807,1850,3884,373,738,1071,276
 077024,Salandra,Medio Basento,2391,1181,1210,2595,225,495,693,189
 077028,Tricarico,Medio Basento,4629,2295,2334,4890,400,968,1433,429
@@ -42,13 +42,16 @@ codice_istat,comune,area,residenti_2026,maschi,femmine,residenti_2021,eta_0_14,e
 077005,Cirigliano,Montagna Materana,279,129,150,297,20,35,107,33
 077007,Craco,Montagna Materana,570,284,286,651,52,136,162,48
 077010,Gorgoglione,Montagna Materana,828,427,401,888,88,163,242,78
-076049,Missanello,Montagna Materana,464,225,239,533,50,113,108,33
+077019,Oliveto Lucano,Montagna Materana,328,161,167,374,20,32,150,71
 077026,San Mauro Forte,Montagna Materana,1168,604,564,1310,109,200,371,102
 077027,Stigliano,Montagna Materana,3369,1610,1759,3768,215,567,1270,433
 076005,Armento,Medio Agri,535,264,271,577,38,109,149,61
+076025,Castelsaraceno,Medio Agri,1112,536,576,1243,84,199,364,108
 076035,Gallicchio,Medio Agri,747,392,355,824,71,145,213,66
+076049,Missanello,Medio Agri,464,225,239,533,50,113,108,33
 076069,Roccanova,Medio Agri,1235,600,635,1345,87,248,402,124
 076074,San Chirico Raparo,Medio Agri,865,450,415,955,56,172,298,117
+076077,San Martino d'Agri,Medio Agri,615,318,297,685,40,116,211,70
 076080,Sant'Arcangelo,Medio Agri,5922,2989,2933,6062,658,1322,1538,397
 076016,Calvera,Mercure – Alto Sinni – Val Sarmento,347,179,168,361,21,53,136,52
 076019,Carbone,Mercure – Alto Sinni – Val Sarmento,475,238,237,550,11,72,201,89
